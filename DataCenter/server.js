@@ -52,5 +52,5 @@ app.listen({
 
 console.log(
     `Servidor ejecutandose en:
-http://10.132.21.72:${port}`
+http://192.168.1.49:${port}`
 );

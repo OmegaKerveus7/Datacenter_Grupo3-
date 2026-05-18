@@ -12,6 +12,9 @@ float temperatura = 0;
 int nivelGas = 0;
 int calidadAire = 0;
 int humo = 0;
+int lineaBase = 0;          // promedio movil del aire limpio
+int muestrasRecolectadas = 0;
+const int DELTA = 3;         // cambio repentino para detectar humo
 
 char datos_esclavo1[32];
 
@@ -38,9 +41,25 @@ void loop() {
 
   nivelGas = analogRead(mq135Pin);
 
-  // ===== Calidad de aire (0-100%) =====
+  // ===== Calidad de aire con deteccion dinamica =====
   calidadAire = map(nivelGas, 0, 1023, 0, 100);
-  humo = (calidadAire >= 19) ? 1 : 0;
+
+  // Calcular linea base (promedio del aire limpio)
+  if (muestrasRecolectadas < 30) {
+    // Fase de calibracion (primeros ~30 segundos)
+    lineaBase = (lineaBase * muestrasRecolectadas + calidadAire) / (muestrasRecolectadas + 1);
+    muestrasRecolectadas++;
+    humo = 0;
+  } else {
+    // Detectar humo: cambio repentino > DELTA respecto a la linea base
+    if (calidadAire > lineaBase + DELTA) {
+      humo = 1;
+    } else {
+      humo = 0;
+      // Actualizar linea base solo en aire limpio
+      lineaBase = (lineaBase * 19 + calidadAire) / 20;
+    }
+  }
 
   // [PENDIENTE] Control de ventilador por PWM
   // Requiere: transistor 2N2222 + diodo 1N4007 + resistencia 220 ohm

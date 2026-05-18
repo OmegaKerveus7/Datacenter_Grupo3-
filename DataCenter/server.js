@@ -27,7 +27,7 @@ app.get('/testconnection', async () => {
 
 });
 
-// ESP32 envia datos
+// ESP32 envia datos de un sensor (viejo, compatible)
 app.post('/sensores', async ({ body }) => {
 
     const {
@@ -39,6 +39,58 @@ app.post('/sensores', async ({ body }) => {
         temperatura,
         humo
     );
+});
+
+// ESP32 envia lecturas de todas las areas
+app.post('/lecturas', async ({ body }) => {
+
+    const { areas } = body;
+
+    if (!areas || !Array.isArray(areas)) {
+        return {
+            estado: "error",
+            mensaje: "Se requiere un arreglo 'areas'"
+        };
+    }
+
+    return await Conection.guardarLecturasMultiples(areas);
+});
+
+// Obtener ultimas lecturas por area
+app.get('/lecturas', async () => {
+
+    const client = await Conection.connect();
+
+    const result = await client.query(
+        `
+        SELECT a.id, a.nombre,
+               l.temperatura, l.humo, l.alerta, l.updated_at
+        FROM areas a
+        LEFT JOIN lecturas l ON l.area_id = a.id
+        ORDER BY a.id
+        `
+    );
+
+    return result.rows;
+});
+
+// Obtener historial de un area
+app.get('/historial/:areaId', async ({ params }) => {
+
+    const client = await Conection.connect();
+
+    const result = await client.query(
+        `
+        SELECT temperatura, humo, alerta, created_at
+        FROM historial_temperatura
+        WHERE area_id = $1
+        ORDER BY created_at DESC
+        LIMIT 100
+        `,
+        [params.areaId]
+    );
+
+    return result.rows;
 });
 
 const port =

@@ -21,7 +21,6 @@ int humedadSuelo = 0;
 int tempJardin = 0;
 int humedadAire = 0;
 
-// Control menu LCD
 int pantalla = 0;
 unsigned long lastCambio = 0;
 
@@ -157,7 +156,6 @@ void loop() {
     digitalWrite(buzzerPin, LOW);
   }
 
-  // ===== 6. LCD 16x2 (cada 3s cambia pantalla) =====
   if (millis() - lastCambio > 3000) {
     pantalla++;
     if (pantalla > 2) pantalla = 0;
@@ -170,39 +168,25 @@ void loop() {
       lcd.setCursor(0, 0);
       lcd.print("Sala Servidores");
       lcd.setCursor(0, 1);
-      lcd.print("H:");
-      lcd.print(humo);
-      lcd.print(" T:");
-      lcd.print(tempServidores);
+      lcd.print("H:"); lcd.print(humo);
+      lcd.print(" T:"); lcd.print(tempServidores);
       lcd.print("C");
-      if (alerta) {
-        lcd.setCursor(13, 1);
-        lcd.print("ALARMA");
-      }
+      if (alerta) { lcd.setCursor(13, 1); lcd.print("ALARMA"); }
       break;
     case 1:
       lcd.setCursor(0, 0);
       lcd.print("Puertas/Acceso");
       lcd.setCursor(0, 1);
-      lcd.print("B:");
-      lcd.print(btn1);
-      lcd.print("/");
-      lcd.print(btn2);
-      lcd.print(" P:");
-      lcd.print(pir);
-      lcd.print(" D:");
-      lcd.print(distancia);
+      lcd.print("B:"); lcd.print(btn1); lcd.print("/"); lcd.print(btn2);
+      lcd.print(" P:"); lcd.print(pir); lcd.print(" D:"); lcd.print(distancia);
       break;
     case 2:
       lcd.setCursor(0, 0);
       lcd.print("Jardin");
       lcd.setCursor(0, 1);
-      lcd.print("SH:");
-      lcd.print(humedadSuelo);
-      lcd.print(" T:");
-      lcd.print(tempJardin);
-      lcd.print(" H:");
-      lcd.print(humedadAire);
+      lcd.print("SH:"); lcd.print(humedadSuelo);
+      lcd.print(" T:"); lcd.print(tempJardin);
+      lcd.print(" H:"); lcd.print(humedadAire);
       break;
   }
 

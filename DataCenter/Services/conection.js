@@ -72,58 +72,7 @@ class Conection {
         }
     }
 
-    async guardarDatos(
-        temperatura,
-        humo
-    ) {
-
-        try {
-
-            const client =
-                await this.connect();
-
-            await client.query(
-                `
-                INSERT INTO datos
-                (
-                    temperatura,
-                    humo
-                )
-                VALUES ($1, $2)
-                `,
-                [
-                    temperatura,
-                    humo
-                ]
-            );
-
-            console.log(
-                "Datos guardados:",
-                temperatura,
-                humo
-            );
-
-            return {
-                estado: "ok",
-                mensaje: "Datos guardados"
-            };
-
-        } catch (error) {
-
-            console.log(
-                "Error guardando:",
-                error.message
-            );
-
-            return {
-                estado: "error",
-                mensaje: error.message
-            };
-        }
-    }
-
-    async guardarLectura(
-        areaId,
+    async guardarServidores(
         temperatura,
         humo,
         alerta
@@ -134,114 +83,35 @@ class Conection {
             const client =
                 await this.connect();
 
-            // Upsert en lecturas actuales
             await client.query(
                 `
-                INSERT INTO lecturas
-                    (area_id, temperatura, humo, alerta, updated_at)
-                VALUES ($1, $2, $3, $4, NOW())
-                ON CONFLICT (area_id)
-                DO UPDATE SET
-                    temperatura = $2,
-                    humo = $3,
-                    alerta = $4,
-                    updated_at = NOW()
+                INSERT INTO area_servidores
+                    (temperatura, humo, alerta)
+                VALUES ($1, $2, $3)
                 `,
                 [
-                    areaId,
                     temperatura,
                     humo,
                     alerta
                 ]
             );
 
-            // Insertar en historial
-            await client.query(
-                `
-                INSERT INTO historial_temperatura
-                    (area_id, temperatura, humo, alerta)
-                VALUES ($1, $2, $3, $4)
-                `,
-                [
-                    areaId,
-                    temperatura,
-                    humo,
-                    alerta
-                ]
+            console.log(
+                "Servidores:",
+                temperatura,
+                humo,
+                alerta
             );
 
             return {
                 estado: "ok",
-                mensaje: "Lectura guardada"
+                mensaje: "Guardado"
             };
 
         } catch (error) {
 
             console.log(
-                "Error guardando lectura:",
-                error.message
-            );
-
-            return {
-                estado: "error",
-                mensaje: error.message
-            };
-        }
-    }
-
-    async guardarLecturasMultiples(areas) {
-
-        const client =
-            await this.connect();
-
-        try {
-
-            for (const a of areas) {
-
-                await client.query(
-                    `
-                    INSERT INTO lecturas
-                        (area_id, temperatura, humo, alerta, updated_at)
-                    VALUES ($1, $2, $3, $4, NOW())
-                    ON CONFLICT (area_id)
-                    DO UPDATE SET
-                        temperatura = $2,
-                        humo = $3,
-                        alerta = $4,
-                        updated_at = NOW()
-                    `,
-                    [
-                        a.area_id,
-                        a.temperatura,
-                        a.humo ?? 0,
-                        a.alerta ?? 0
-                    ]
-                );
-
-                await client.query(
-                    `
-                    INSERT INTO historial_temperatura
-                        (area_id, temperatura, humo, alerta)
-                    VALUES ($1, $2, $3, $4)
-                    `,
-                    [
-                        a.area_id,
-                        a.temperatura,
-                        a.humo ?? 0,
-                        a.alerta ?? 0
-                    ]
-                );
-            }
-
-            return {
-                estado: "ok",
-                mensaje: `${areas.length} areas actualizadas`
-            };
-
-        } catch (error) {
-
-            console.log(
-                "Error guardando lecturas:",
+                "Error servidores:",
                 error.message
             );
 

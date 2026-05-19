@@ -8,6 +8,7 @@ int buzzerPin = 8;
 // Datos esclavo 1 - Sala Servidores
 int humo = 0;
 int tempServidores = 0;
+int humedadServidores = 0;
 int alerta = 0;
 
 // Datos esclavo 2 - Puertas/Acceso
@@ -54,10 +55,12 @@ void loop() {
   }
 
   if (resp1.length() > 0) {
-    int coma = resp1.indexOf(',');
-    if (coma > 0) {
-      humo = resp1.substring(1, coma).toInt();
-      tempServidores = resp1.substring(coma + 1).toInt();
+    int coma1 = resp1.indexOf(',');
+    int coma2 = resp1.indexOf(',', coma1 + 1);
+    if (coma1 > 0) {
+      humo = resp1.substring(1, coma1).toInt();
+      tempServidores = resp1.substring(coma1 + 1, coma2).toInt();
+      humedadServidores = (coma2 > 0) ? resp1.substring(coma2 + 1).toInt() : 0;
       alerta = (humo == 1 || tempServidores >= 35) ? 1 : 0;
       Serial.print("E1: "); Serial.println(resp1);
     }
@@ -170,10 +173,10 @@ void loop() {
       lcd.setCursor(0, 0);
       lcd.print("Sala Servidores");
       lcd.setCursor(0, 1);
-      lcd.print("H:"); lcd.print(humo);
-      lcd.print(" T:"); lcd.print(tempServidores);
-      lcd.print("C");
-      if (alerta) { lcd.setCursor(13, 1); lcd.print("ALARMA"); }
+      lcd.print(humo); lcd.print(" ");
+      lcd.print(tempServidores); lcd.print("C ");
+      lcd.print(humedadServidores); lcd.print("%");
+      if (alerta) { lcd.setCursor(12, 1); lcd.print("ALARMA"); }
       break;
     case 1:
       lcd.setCursor(0, 0);

@@ -121,6 +121,56 @@ class Conection {
             };
         }
     }
+
+    async guardarJardin(
+        humedadSuelo,
+        temperatura,
+        humedadAire
+    ) {
+
+        try {
+
+            const client =
+                await this.connect();
+
+            await client.query(
+                `
+                INSERT INTO area_jardin
+                    (humedad_suelo, temperatura, humedad_aire)
+                VALUES ($1, $2, $3)
+                `,
+                [
+                    humedadSuelo,
+                    temperatura,
+                    humedadAire
+                ]
+            );
+
+            console.log(
+                "Jardin:",
+                humedadSuelo,
+                temperatura,
+                humedadAire
+            );
+
+            return {
+                estado: "ok",
+                mensaje: "Guardado"
+            };
+
+        } catch (error) {
+
+            console.log(
+                "Error jardin:",
+                error.message
+            );
+
+            return {
+                estado: "error",
+                mensaje: error.message
+            };
+        }
+    }
 }
 
 export default new Conection();

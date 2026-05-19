@@ -55,6 +55,37 @@ app.get('/area/servidores', async () => {
     return result.rows;
 });
 
+app.post('/area/jardin', async ({ body }) => {
+
+    const {
+        humedad_suelo,
+        temperatura,
+        humedad_aire
+    } = body;
+
+    return await Conection.guardarJardin(
+        humedad_suelo,
+        temperatura,
+        humedad_aire
+    );
+});
+
+app.get('/area/jardin', async () => {
+
+    const client = await Conection.connect();
+
+    const result = await client.query(
+        `
+        SELECT humedad_suelo, temperatura, humedad_aire, created_at
+        FROM area_jardin
+        ORDER BY created_at DESC
+        LIMIT 20
+        `
+    );
+
+    return result.rows;
+});
+
 const port =
     parseInt(process.env.APP_PORT || '3000');
 

@@ -9,12 +9,13 @@ DHT dht(DHTPIN, DHTTYPE);
 int mq135Pin = A0;
 
 float temperatura = 0;
+float humedadAire = 0;
 int nivelGas = 0;
 int calidadAire = 0;
 int humo = 0;
-int lineaBase = 0;          // promedio movil del aire limpio
+int lineaBase = 0;
 int muestrasRecolectadas = 0;
-const int DELTA = 3;         // cambio repentino para detectar humo
+const int DELTA = 3;
 
 char datos_esclavo1[32];
 
@@ -30,58 +31,48 @@ void setup() {
 unsigned long lastDHTRead = 0;
 
 void loop() {
-  // ===== Lecturas (DHT con proteccion de tiempo) =====
-  if (millis() - lastDHTRead >= 1500) {
+  if (millis() - lastDHTRead >= 2000) {
     lastDHTRead = millis();
     float t = dht.readTemperature();
-    if (!isnan(t)) {
-      temperatura = t;
-    }
+    float h = dht.readHumidity();
+    if (!isnan(t)) temperatura = t;
+    if (!isnan(h)) humedadAire = h;
   }
 
   nivelGas = analogRead(mq135Pin);
-
-  // ===== Calidad de aire con deteccion dinamica =====
   calidadAire = map(nivelGas, 0, 1023, 0, 100);
 
-  // Calcular linea base (promedio del aire limpio)
   if (muestrasRecolectadas < 30) {
-    // Fase de calibracion (primeros ~30 segundos)
     lineaBase = (lineaBase * muestrasRecolectadas + calidadAire) / (muestrasRecolectadas + 1);
     muestrasRecolectadas++;
     humo = 0;
   } else {
-    // Detectar humo: cambio repentino > DELTA respecto a la linea base
     if (calidadAire > lineaBase + DELTA) {
       humo = 1;
     } else {
       humo = 0;
-      // Actualizar linea base solo en aire limpio
       lineaBase = (lineaBase * 19 + calidadAire) / 20;
     }
   }
 
-  // [PENDIENTE] Control de ventilador por PWM
-  // Requiere: transistor 2N2222 + diodo 1N4007 + resistencia 220 ohm
-  // #define FAN_PIN 5
-  // pinMode(FAN_PIN, OUTPUT);
-  // int velocidad = 0;
-  // if (temperatura >= 35) velocidad = 255;
-  // else if (temperatura >= 30) velocidad = 191;
-  // else if (temperatura >= 25) velocidad = 128;
-  // else velocidad = 0;
-  // analogWrite(FAN_PIN, velocidad);
-
-  // ===== Formato de salida =====
   snprintf(datos_esclavo1, sizeof(datos_esclavo1),
-           "|%d,%d",
+           "|%d,%d,%d",
            humo,
-           (int)temperatura);
+           (int)temperatura,
+           (int)humedadAire);
 
-  Serial.print("AQ:");
+  Serial.print("MQ135 raw=");
+  Serial.print(nivelGas);
+  Serial.print(" calidad=");
   Serial.print(calidadAire);
-  Serial.print("% ");
-  Serial.println(datos_esclavo1);
+  Serial.print("% temp=");
+  Serial.print((int)temperatura);
+  Serial.print(" hum=");
+  Serial.print((int)humedadAire);
+  Serial.print("% humo=");
+  Serial.print(humo);
+  Serial.print(" base=");
+  Serial.println(lineaBase);
 
   delay(1000);
 }

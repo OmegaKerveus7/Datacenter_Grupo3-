@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <Servo.h>
+#include <DHT.h>
 
 Servo servo1;
 Servo servo2;
@@ -7,12 +8,60 @@ Servo servo2;
 const int boton1 = 2;
 const int boton2 = 3;
 const int pirPin = 4;
+const int dhtPin = 7;
 
-int btn1 = 0;
-int btn2 = 0;
+#define DHTTYPE DHT11
+DHT dht(dhtPin, DHTTYPE);
+
+int btn1Actual = 0;
+int btn2Actual = 0;
 int pir = 0;
+int temperatura = 0;
 
-char datos_esclavo2[20];
+int btn1Ant = HIGH;
+int btn2Ant = HIGH;
+unsigned long pirOnTime = 0;
+bool pirActivo = false;
+unsigned long ultimoDHT = 0;
+
+const int POS_P1_CERRADA = 0;
+const int POS_P1_ABIERTA = 95;
+const int POS_P2_CERRADA = 90;
+const int POS_P2_ABIERTA = 0;
+const int TIEMPO_ABIERTA = 5000;
+
+bool puerta1Abierta = false;
+bool puerta2Abierta = false;
+unsigned long tiempoPuerta1 = 0;
+unsigned long tiempoPuerta2 = 0;
+
+char datos_esclavo2[25];
+
+void abrirPuerta1() {
+  servo1.write(POS_P1_ABIERTA);
+  puerta1Abierta = true;
+  tiempoPuerta1 = millis();
+  Serial.println("Abrir puerta 1 (5s)");
+}
+
+void cerrarPuerta1() {
+  servo1.write(POS_P1_CERRADA);
+  puerta1Abierta = false;
+  Serial.println("Cerrar puerta 1");
+}
+
+void abrirPuerta2() {
+  servo2.write(POS_P2_ABIERTA);
+  puerta2Abierta = true;
+  tiempoPuerta2 = millis();
+  Serial.println("Abrir puerta 2 (5s)");
+}
+
+void cerrarPuerta2() {
+  servo2.write(POS_P2_CERRADA);
+  puerta2Abierta = false;
+  Serial.println("Cerrar puerta 2");
+}
 
 void setup() {
   servo1.attach(9);
@@ -21,9 +70,10 @@ void setup() {
   pinMode(boton1, INPUT_PULLUP);
   pinMode(boton2, INPUT_PULLUP);
   pinMode(pirPin, INPUT);
+  dht.begin();
 
-  servo1.write(90);
-  servo2.write(90);
+  cerrarPuerta1();
+  cerrarPuerta2();
 
   Wire.begin(9);
   Wire.onRequest(enviarDatos);
@@ -34,18 +84,52 @@ void setup() {
 }
 
 void loop() {
-  btn1 = (digitalRead(boton1) == LOW) ? 1 : 0;
-  btn2 = (digitalRead(boton2) == LOW) ? 1 : 0;
-  pir = digitalRead(pirPin);
+  btn1Actual = digitalRead(boton1);
+  btn2Actual = digitalRead(boton2);
+  int pirLectura = digitalRead(pirPin);
 
-  if (btn1) servo1.write(180);
-  else servo1.write(90);
+  // DHT11 cada 2 segundos
+  if (millis() - ultimoDHT >= 2000) {
+    ultimoDHT = millis();
+    float t = dht.readTemperature();
+    if (!isnan(t)) temperatura = (int)t;
+  }
 
-  if (btn2) servo2.write(180);
-  else servo2.write(90);
+  // PIR: debounce 200ms, pulso 1s, pausa 6s
+  if (pirLectura == HIGH && !pirActivo) {
+    if (millis() - pirOnTime > 200) {
+      pirActivo = true;
+      pirOnTime = millis();
+      Serial.println("PIR: Movimiento detectado");
+    }
+  } else if (pirLectura == LOW && !pirActivo) {
+    pirOnTime = millis();
+  }
+
+  if (pirActivo && millis() - pirOnTime < 1000) {
+    pir = 1;
+  } else {
+    pir = 0;
+    if (pirActivo && millis() - pirOnTime > 6000) { pirActivo = false; pirOnTime = millis(); }
+  }
+
+  if (btn1Actual == LOW && btn1Ant == HIGH) abrirPuerta1();
+  btn1Ant = btn1Actual;
+
+  if (btn2Actual == LOW && btn2Ant == HIGH) abrirPuerta2();
+  btn2Ant = btn2Actual;
+
+  if (puerta1Abierta && millis() - tiempoPuerta1 >= TIEMPO_ABIERTA) cerrarPuerta1();
+  if (puerta2Abierta && millis() - tiempoPuerta2 >= TIEMPO_ABIERTA) cerrarPuerta2();
 
   snprintf(datos_esclavo2, sizeof(datos_esclavo2),
-           "|%d,%d,%d", btn1, btn2, pir);
+           "|%d,%d,%d,%d,%d,%d",
+           btn1Actual == LOW ? 1 : 0,
+           btn2Actual == LOW ? 1 : 0,
+           pir,
+           temperatura,
+           puerta1Abierta ? 1 : 0,
+           puerta2Abierta ? 1 : 0);
 
   Serial.println(datos_esclavo2);
   delay(100);
@@ -60,12 +144,12 @@ void recibirComando(int bytes) {
     char cmd = Wire.read();
     if (cmd == 'O') {
       int puerta = Wire.read() - '0';
-      if (puerta == 1) { servo1.write(180); Serial.println("Abrir puerta 1"); }
-      if (puerta == 2) { servo2.write(180); Serial.println("Abrir puerta 2"); }
+      if (puerta == 1) abrirPuerta1();
+      if (puerta == 2) abrirPuerta2();
     } else if (cmd == 'C') {
       int puerta = Wire.read() - '0';
-      if (puerta == 1) { servo1.write(90); Serial.println("Cerrar puerta 1"); }
-      if (puerta == 2) { servo2.write(90); Serial.println("Cerrar puerta 2"); }
+      if (puerta == 1) cerrarPuerta1();
+      if (puerta == 2) cerrarPuerta2();
     }
   }
 }

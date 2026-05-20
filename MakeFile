@@ -1,4 +1,14 @@
-.PHONY: run
+.PHONY: run dev build
 
 run:
 	bun run DataCenter/server.js
+
+dev:
+	bun run DataCenter/server.js &
+	cd Frontend && bun run dev
+
+build:
+	cd Frontend && bun run build
+
+frontend:
+	cd Frontend && bun run dev

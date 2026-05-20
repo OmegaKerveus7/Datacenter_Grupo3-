@@ -24,46 +24,7 @@ app.use(
     })
 );
 
-// Sirve el frontend compilado en produccion
 import { existsSync, readFileSync } from 'fs';
-
-const frontendDist = '../Frontend/dist';
-const frontendExists = existsSync(frontendDist);
-
-if (frontendExists) {
-
-    app.get('/*', ({ path, set }) => {
-
-        if (path.startsWith('/api/') || path.startsWith('/auth/')) return;
-
-        const filePath = `${frontendDist}${path === '/' ? '/index.html' : path}`;
-
-        if (existsSync(filePath)) {
-
-            const ext = filePath.split('.').pop();
-
-            const mimeTypes = {
-                html: 'text/html',
-                js: 'application/javascript',
-                css: 'text/css',
-                svg: 'image/svg+xml',
-                png: 'image/png',
-                json: 'application/json'
-            };
-
-            set.headers['Content-Type'] = mimeTypes[ext] || 'text/plain';
-
-            return readFileSync(filePath);
-        }
-
-        if (!path.includes('.')) {
-
-            set.headers['Content-Type'] = 'text/html';
-
-            return readFileSync(`${frontendDist}/index.html`);
-        }
-    });
-}
 
 async function authGuard({ jwt, headers, set }) {
 
@@ -301,6 +262,57 @@ app.post('/api/acceso/puerta-2', async ({ jwt, headers, set }) => {
 
     } catch (error) {
 
+        set.status = 500;
+        return { error: error.message };
+    }
+});
+
+// ============ ACCESO NFC (llave del chip como codigo) ============
+
+app.post('/api/acceso/nfc', async ({ body, set, request }) => {
+
+    try {
+        const { codigo_nfc } = body;
+
+        if (!codigo_nfc) {
+            set.status = 400;
+            return { error: "No tiene acceso" };
+        }
+
+        const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'desconocida';
+        const ua = request.headers.get('user-agent') || '';
+
+        const usuario = await Conection.buscarUsuarioPorNfc(codigo_nfc);
+
+        if (!usuario) {
+            await Conection.registrarIntentoIntruso(codigo_nfc, ip, ua);
+            set.status = 403;
+            return { error: "No tiene acceso" };
+        }
+
+        const visita = await Conection.obtenerVisitaAprobadaPorUsuario(usuario.id);
+
+        if (!visita) {
+            await Conection.registrarIntentoIntruso(codigo_nfc, ip, ua);
+            set.status = 403;
+            return { error: "No tiene visita programada para esta hora" };
+        }
+
+        // Marcar NFC como verificado (directo, sin validar codigo_nfc del registro)
+        await Conection.marcarNfcVerificado(visita.id);
+
+        // Crear comando y log de acceso
+        const comando = await Conection.crearComando('OPEN_DOOR_2');
+
+        await Conection.registrarAcceso(usuario.id, 2, 'nfc');
+
+        return {
+            estado: "ok",
+            mensaje: `Bienvenido ${usuario.nombre}, puerta 2 abierta`,
+            comandoId: comando.id
+        };
+
+    } catch (error) {
         set.status = 500;
         return { error: error.message };
     }
@@ -709,6 +721,38 @@ app.get('/area/jardin', async () => {
 
     return result.rows;
 });
+
+// ============ TELEGRAM ============
+
+app.post('/api/telegram/enviar', async ({ body }) => {
+
+    const { mensaje } = body;
+
+    if (!mensaje) {
+
+        return { estado: "error", mensaje: "Mensaje requerido" };
+    }
+
+    return await Conection.enviarTelegram(mensaje);
+});
+
+// ============ SPA FALLBACK (FRONTEND) ============
+
+import { staticPlugin } from '@elysiajs/static';
+
+const frontendDist = '../Frontend/dist';
+
+if (existsSync(frontendDist)) {
+
+    app.use(staticPlugin({ assets: frontendDist, prefix: '/' }));
+
+    app.get('*', ({ set }) => {
+
+        set.headers['Content-Type'] = 'text/html';
+
+        return readFileSync(frontendDist + '/index.html', 'utf-8');
+    });
+}
 
 // ============ LISTEN ============
 

@@ -70,7 +70,7 @@ export default function MisVisitas() {
                     <td>
                       {v.estado === 'aprobada' && (
                         <button
-                          onClick={() => navigate(`/verificar-nfc/${v.id}`)}
+                          onClick={() => navigate('/verificar-nfc')}
                           style={styles.btn}
                         >
                           NFC

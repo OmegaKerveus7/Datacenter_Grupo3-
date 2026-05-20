@@ -4,8 +4,7 @@ run:
 	bun run DataCenter/server.js
 
 dev:
-	bun run DataCenter/server.js &
-	cd Frontend && bun run dev
+	powershell -Command "Start-Process -NoNewWindow -WorkingDirectory DataCenter bun 'run server.js'; Set-Location Frontend; bun run dev"
 
 build:
 	cd Frontend && bun run build

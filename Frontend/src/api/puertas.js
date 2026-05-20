@@ -1,4 +1,4 @@
-const API = 'http://192.168.1.49:3000';
+const API = '';
 
 export async function abrirPuerta1(token) {
   const res = await fetch(`${API}/api/acceso/puerta-1`, {

@@ -42,12 +42,8 @@ function App() {
             }
           />
           <Route
-            path="/verificar-nfc/:id"
-            element={
-              <ProtectedRoute>
-                <VerificarNFC />
-              </ProtectedRoute>
-            }
+            path="/verificar-nfc"
+            element={<VerificarNFC />}
           />
           <Route
             path="/panel-visitas"

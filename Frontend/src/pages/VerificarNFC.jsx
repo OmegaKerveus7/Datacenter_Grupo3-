@@ -1,115 +1,102 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { verificarNFC } from '../api/visitas';
-import { abrirPuerta2 } from '../api/puertas';
+import { accesoNFC } from '../api/visitas';
 
 export default function VerificarNFC() {
-  const { id } = useParams();
-  const { token } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [codigo, setCodigo] = useState('');
-  const [msg, setMsg] = useState('');
-  const [error, setError] = useState('');
-  const [verificado, setVerificado] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [opening, setOpening] = useState(false);
+  const [estado, setEstado] = useState('WAITING');
+  const [mensaje, setMensaje] = useState('');
+  const processedRef = useRef(null);
 
-  async function handleVerificar(e) {
-    e.preventDefault();
-    setMsg('');
-    setError('');
-    setLoading(true);
-    const res = await verificarNFC(token, id, codigo);
-    setLoading(false);
-    if (res.estado === 'ok') {
-      setVerificado(true);
-      setMsg('Código NFC verificado correctamente. Ya puedes abrir la puerta 2.');
-    } else {
-      setError(res.error || 'Error al verificar código NFC');
-    }
-  }
+  useEffect(() => {
+    if (loading) return;
 
-  async function handleAbrirPuerta() {
-    setOpening(true);
-    setError('');
-    const res = await abrirPuerta2(token);
-    setOpening(false);
-    if (res.estado === 'ok') {
-      setMsg('Puerta 2 abierta correctamente');
-    } else {
-      setError(res.error || 'Error al abrir puerta');
-    }
-  }
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get('key');
+    if (!key) { setEstado('WAITING'); return; }
+
+    const id = `${key}:${user ? user.id : 'null'}`;
+    if (processedRef.current === id) return;
+    processedRef.current = id;
+
+    setEstado('LOADING');
+    accesoNFC(key).then(res => {
+      if (res.estado === 'ok') {
+        setEstado('SUCCESS');
+        setMensaje(res.mensaje || 'Acceso concedido');
+      } else if (res.error === 'No tiene acceso') {
+        setEstado('NO_ACCESO');
+      } else if (res.error === 'No tiene visita programada para esta hora') {
+        setEstado('NO_VISITA');
+      } else if (!user) {
+        setEstado('NO_LOGIN');
+      } else {
+        setEstado('NO_ACCESO');
+      }
+    });
+  }, [user, loading]);
+
+  const ESTADOS = {
+    SUCCESS: { icon: '✅', color: '#00b894', msg: mensaje },
+    NO_ACCESO: { icon: '🚫', color: '#e94560', msg: 'No tiene acceso' },
+    NO_VISITA: { icon: '📅', color: '#fdcb6e', msg: 'No tiene visita programada para esta hora' },
+    NO_LOGIN: { icon: '🔒', color: '#e94560', msg: 'No está logueado' },
+    WAITING: { icon: '🏢', color: '#636e72', msg: '' },
+    LOADING: { icon: '⏳', color: '#74b9ff', msg: '' },
+  };
+
+  const e = ESTADOS[estado];
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2>Verificar Código NFC</h2>
-        <p style={styles.sub}>Escanea tu código NFC o ingrésalo manualmente</p>
+        <div style={{ fontSize: '4em', textAlign: 'center', marginBottom: '20px' }}>
+          {estado === 'LOADING' ? '⏳' : e.icon}
+        </div>
 
-        {msg && <div style={styles.success}>{msg}</div>}
-        {error && <div style={styles.error}>{error}</div>}
+        {estado === 'LOADING' && <h2 style={{ textAlign: 'center' }}>Verificando...</h2>}
 
-        <form onSubmit={handleVerificar} style={styles.form}>
-          <input
-            type="text"
-            placeholder="Código NFC"
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-            required
-            style={styles.input}
-          />
-          <button type="submit" disabled={loading || verificado} style={styles.button}>
-            {loading ? 'Verificando...' : 'Verificar Código'}
-          </button>
-        </form>
-
-        {verificado && (
-          <button
-            onClick={handleAbrirPuerta}
-            disabled={opening}
-            style={{ ...styles.button, background: '#00b894', marginTop: '15px' }}
-          >
-            {opening ? 'Abriendo...' : 'Abrir Puerta 2'}
-          </button>
+        {estado === 'WAITING' && (
+          <>
+            <h2 style={{ textAlign: 'center' }}>Acceso por NFC</h2>
+            <p style={styles.sub}>Escanea tu chip NFC</p>
+            <button onClick={() => navigate('/dashboard')} style={styles.btn}>Volver</button>
+          </>
         )}
 
-        <button
-          onClick={() => navigate('/mis-visitas')}
-          style={{ ...styles.button, background: '#333', marginTop: '10px' }}
-        >
-          Volver a Mis Visitas
-        </button>
+        {estado === 'SUCCESS' && (
+          <>
+            <h2 style={{ textAlign: 'center', color: e.color }}>{e.msg}</h2>
+            <p style={styles.sub}>Puede ingresar</p>
+            <button onClick={() => navigate('/dashboard')} style={{ ...styles.btn, background: e.color }}>Ir al Inicio</button>
+          </>
+        )}
+
+        {['NO_ACCESO', 'NO_VISITA', 'NO_LOGIN'].includes(estado) && (
+          <>
+            <h2 style={{ textAlign: 'center', color: e.color }}>{e.msg}</h2>
+            <button onClick={() => navigate(user ? '/dashboard' : '/login')} style={{ ...styles.btn, background: e.color, marginTop: '20px' }}>
+              {user ? 'Volver' : 'Iniciar Sesion'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 const styles = {
-  container: { padding: '20px', display: 'flex', justifyContent: 'center' },
+  container: { padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' },
   card: {
-    background: '#1a1a2e', padding: '30px', borderRadius: '10px',
-    width: '100%', maxWidth: '450px', color: 'white'
+    background: '#1a1a2e', padding: '40px', borderRadius: '10px',
+    width: '100%', maxWidth: '400px', color: 'white'
   },
-  sub: { fontSize: '0.85em', opacity: 0.7, marginBottom: '20px' },
-  form: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  input: {
-    padding: '12px', borderRadius: '6px', border: '1px solid #333',
-    background: '#16213e', color: 'white', fontSize: '1.2em',
-    textAlign: 'center', letterSpacing: '3px'
-  },
-  button: {
-    padding: '12px', borderRadius: '6px', border: 'none',
-    background: '#e94560', color: 'white', fontSize: '1em',
-    cursor: 'pointer', fontWeight: 'bold'
-  },
-  success: {
-    background: '#00b89433', color: '#00b894', padding: '10px',
-    borderRadius: '6px', marginBottom: '15px', textAlign: 'center'
-  },
-  error: {
-    background: '#e9456033', color: '#e94560', padding: '10px',
-    borderRadius: '6px', marginBottom: '15px', textAlign: 'center'
+  sub: { textAlign: 'center', fontSize: '0.9em', opacity: 0.7, marginTop: '10px' },
+  btn: {
+    display: 'block', width: '100%', padding: '12px', borderRadius: '6px',
+    border: 'none', background: '#e94560', color: 'white',
+    fontSize: '1em', cursor: 'pointer', fontWeight: 'bold', marginTop: '15px'
   }
 };

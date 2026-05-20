@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Data Center Automatizado - Informe Tecnico</title>
+<style>
+  @page { margin: 2.54cm; size: letter; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 12pt;
+    line-height: 2;
+    color: #000;
+    max-width: 21cm;
+    margin: 0 auto;
+    padding: 2.54cm;
+    text-align: justify;
+  }
+  .portada {
+    text-align: center;
+    padding-top: 6cm;
+    page-break-after: always;
+  }
+  .portada h1 { font-size: 18pt; font-weight: bold; margin-bottom: 1cm; }
+  .portada h2 { font-size: 14pt; font-weight: bold; margin-bottom: 0.5cm; }
+  .portada p { font-size: 12pt; margin-bottom: 0.3cm; }
+  .portada .universidad { font-size: 14pt; font-weight: bold; margin-bottom: 2cm; }
+  .portada .info { margin-top: 3cm; }
+  h1 { font-size: 14pt; font-weight: bold; text-align: center; margin: 1cm 0 0.5cm 0; page-break-before: always; }
+  h1:first-of-type { page-break-before: avoid; }
+  h2 { font-size: 12pt; font-weight: bold; margin: 0.8cm 0 0.3cm 0; text-align: left; }
+  h3 { font-size: 12pt; font-weight: bold; font-style: italic; margin: 0.5cm 0 0.2cm 0; text-align: left; }
+  p { margin-bottom: 0.5cm; text-indent: 1.27cm; }
+  p.no-indent { text-indent: 0; }
+  ul, ol { margin: 0.3cm 0 0.3cm 1.5cm; }
+  li { margin-bottom: 0.2cm; }
+  table { width: 100%; border-collapse: collapse; margin: 0.5cm 0; font-size: 11pt; }
+  th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #e0e0e0; font-weight: bold; }
+  code { font-family: 'Courier New', monospace; font-size: 11pt; background: #f5f5f5; padding: 1px 3px; }
+  .ref { margin-left: 1.27cm; text-indent: -1.27cm; margin-bottom: 0.3cm; }
+  .page-num { text-align: center; font-size: 10pt; margin-top: 1cm; }
+  .figura { text-align: center; margin: 0.5cm 0; }
+  .figura p { text-indent: 0; font-style: italic; font-size: 11pt; }
+  .salto { page-break-before: always; }
+  @media print {
+    body { padding: 0; }
+    .portada { padding-top: 5cm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="portada">
+  <p class="no-indent universidad">Universidad Mariano Galvez de Guatemala</p>
+  <p class="no-indent">Facultad de Ingenieria en Sistemas de Informacion</p>
+  <p class="no-indent">Arquitectura de Computadoras I</p>
+  <p class="no-indent">Septimo Ciclo &mdash; 2026</p>
+
+  <h1 style="margin-top:3cm;">Data Center Automatizado</h1>
+  <h2>Sistema de Monitoreo, Control y Seguridad con Arduino</h2>
+
+  <div class="info">
+    <p class="no-indent"><strong>Integrantes:</strong></p>
+    <p class="no-indent">[Nombre del integrante 1]</p>
+    <p class="no-indent">[Nombre del integrante 2]</p>
+    <p class="no-indent">[Nombre del integrante 3]</p>
+    <p class="no-indent">[Nombre del integrante 4]</p>
+    <p class="no-indent">[Nombre del integrante 5]</p>
+    <p class="no-indent" style="margin-top:1cm;"><strong>Docente:</strong> [Nombre del docente]</p>
+    <p class="no-indent"><strong>Fecha:</strong> 31 de mayo de 2026</p>
+  </div>
+</div>
+
+<div class="salto">
+<h1>Indice</h1>
+<p class="no-indent" style="text-indent:0;">
+1. Resumen Ejecutivo ............................................. 3<br>
+2. Introduccion ................................................... 4<br>
+3. Marco Teorico .................................................. 5<br>
+&nbsp;&nbsp;3.1 Arquitectura RISC del AVR ............................... 5<br>
+&nbsp;&nbsp;3.2 Jerarquia de Memoria ................................... 5<br>
+&nbsp;&nbsp;3.3 Buses y Protocolos de Comunicacion ................... 6<br>
+&nbsp;&nbsp;3.4 Modulacion PWM ......................................... 6<br>
+4. Diseno del Sistema .......................................... 7<br>
+&nbsp;&nbsp;4.1 Arquitectura General .................................. 7<br>
+&nbsp;&nbsp;4.2 Mapa de Conexiones ................................... 8<br>
+&nbsp;&nbsp;4.3 Flujo de Datos ........................................ 9<br>
+5. Implementacion ............................................... 10<br>
+&nbsp;&nbsp;5.1 Esclavo 1 - Sala Servidores .......................... 10<br>
+&nbsp;&nbsp;5.2 Esclavo 2 - Puertas y Acceso ........................ 11<br>
+&nbsp;&nbsp;5.3 Esclavo 3 - Jardin ................................... 11<br>
+&nbsp;&nbsp;5.4 Arduino Mega - Maestro .............................. 12<br>
+&nbsp;&nbsp;5.5 ESP32 - Gateway ...................................... 12<br>
+&nbsp;&nbsp;5.6 API y Base de Datos ................................. 13<br>
+&nbsp;&nbsp;5.7 Telegram ............................................. 13<br>
+6. Protocolo I2C ................................................. 14<br>
+7. Reglas del Sistema y Prioridades ............................. 15<br>
+8. Endpoints de la API ........................................... 16<br>
+9. Resultados Obtenidos .......................................... 17<br>
+10. Conclusiones ................................................. 18<br>
+11. Referencias .................................................. 19<br>
+12. Anexos ....................................................... 20<br>
+</p>
+</div>
+
+<div class="salto">
+<h1>1. Resumen Ejecutivo</h1>
+<p>Este documento describe el proyecto Data Center Automatizado, desarrollado para el curso de Arquitectura de Computadoras I. Se trata de un sistema distribuido que usa tres Arduino Uno como esclavos y un Arduino Mega 2560 como maestro, todos conectados por el bus I2C. Un modulo ESP32 funciona como gateway WiFi y se comunica con el Mega por UART usando un convertidor de nivel TXS0108E.</p>
+<p>El sistema monitorea tres areas: la sala de servidores (temperatura, humedad, humo), el area de acceso con puertas (sensores PIR y botones) y el jardin (humedad del suelo, temperatura ambiente y riego). El Mega se encarga de juntar toda la informacion, decidir cuando activar alarmas, controlar el ventilador por PWM y mostrar datos en una pantalla LCD 16x2. Los datos se envian al ESP32, que los transmite por WiFi a una API REST hecha en Bun con Elysia, y se guardan en una base de datos PostgreSQL en AWS.</p>
+<p>El sistema incluye deteccion de humo con linea base adaptativa, ventilador con cuatro velocidades segun la temperatura, alarma de intrusion que solo se activa si el PIR detecta movimiento con las puertas cerradas, y un bot de Telegram para recibir notificaciones.</p>
+</div>
+
+<div class="salto">
+<h1>2. Introduccion</h1>
+<p>Los Data Centers son infraestructura critica para cualquier empresa que dependa de servicios digitales. Mantener la temperatura adecuada, controlar quien entra y sale, y detectar problemas a tiempo es fundamental para evitar perdidas de informacion o danos en los equipos. Este proyecto busca resolver esos problemas usando microcontroladores Arduino, que son accesibles y permiten aplicar los conceptos que vemos en el curso.</p>
+<p>El objetivo fue construir un sistema que pudiera monitorear y controlar un Data Center en miniatura, con sensores reales tomando mediciones, actuadores respondiendo a las condiciones del ambiente, y todo conectado a la nube para guardar historicos. Aplicamos conceptos de arquitectura de computadoras como buses de datos (I2C, UART), jerarquia de memoria, modulacion PWM y arquitectura RISC del AVR.</p>
+<p>El sistema se compone de un Arduino Mega como maestro I2C, tres Arduino Uno como esclavos, un ESP32 para WiFi, una API REST y PostgreSQL en AWS. Cada esclavo maneja una zona distinta del Data Center y reporta al maestro, que es el que toma las decisiones finales.</p>
+</div>
+
+<div class="salto">
+<h1>3. Marco Teorico</h1>
+
+<h2>3.1 Arquitectura RISC del AVR</h2>
+<p>Los microcontroladores ATmega2560 (del Mega) y ATmega328P (del Uno) usan una arquitectura RISC de 8 bits. Esto significa que tienen un conjunto de instrucciones reducido, donde la mayoria se ejecutan en un solo ciclo de reloj. Cada instruccion mide 16 bits. A diferencia de procesadores CISC como los de Intel, el AVR puede ejecutar una instruccion por ciclo de reloj gracias a su pipeline de dos etapas: mientras una instruccion se ejecuta, la siguiente ya se esta cargando.</p>
+<p>La frecuencia de reloj es de 16 MHz, lo que da un tiempo de 62.5 nanosegundos por instruccion en el mejor caso. El chip tiene 32 registros de proposito general conectados directamente a la ALU, lo que acelera las operaciones aritmeticas. Esta arquitectura es ideal para sistemas embebidos en tiempo real como este proyecto.</p>
+
+<h2>3.2 Jerarquia de Memoria</h2>
+<p>En el sistema manejamos varios niveles de memoria, igual que en una computadora normal:</p>
+<ul>
+<li><strong>Flash:</strong> 256 KB en el Mega, 32 KB en cada Uno. Ahi se guarda el programa y nunca se pierde al apagar.</li>
+<li><strong>SRAM:</strong> Solo 8 KB en el Mega y 2 KB en los Unos. Es poca, asi que hay que cuidar las variables y usar PROGMEM para guardar constantes en la Flash.</li>
+<li><strong>EEPROM:</strong> 4 KB en el Mega. Se usa para guardar configuraciones como los umbrales de temperatura.</li>
+<li><strong>Base de datos en la nube:</strong> PostgreSQL en AWS. Es el nivel mas alto, con capacidad practicamente ilimitada para guardar historicos de lecturas y eventos.</li>
+</ul>
+
+<h2>3.3 Buses y Protocolos de Comunicacion</h2>
+<p>Usamos cuatro protocolos de comunicacion distintos:</p>
+<p><strong>I2C:</strong> Es el bus principal entre el Mega y los Unos. Usa dos cables (SDA y SCL) y permite conectar hasta 127 dispositivos. Opera a 100 kHz y cada esclavo tiene una direccion unica. El Mega es el unico maestro y los Unos son esclavos. El LCD tambien va en este bus.</p>
+<p><strong>UART:</strong> Se usa entre el Mega (Serial1, pines 18 y 19) y el ESP32 (Serial2, pines 16 y 17) a 9600 baudios. Necesita el TXS0108E porque el Mega trabaja a 5V y el ESP32 a 3.3V.</p>
+<p><strong>SPI:</strong> Lo usan los microcontroladores internamente para comunicarse con perifericos rapidos, aunque en este proyecto no lo explotamos directamente.</p>
+<p><strong>WiFi:</strong> El ESP32 se conecta a la red local (SSID Omega) y hace peticiones HTTP a la API.</p>
+
+<h2>3.4 Modulacion PWM</h2>
+<p>El control del ventilador se hace con PWM (modulacion por ancho de pulso). Consiste en prender y apagar la senal muy rapido (a 490 Hz) y variar el tiempo que esta prendida vs apagada. Esto permite controlar la velocidad del motor sin perder torque. Usamos cuatro niveles: 0 (apagado), 20%, 40% y 60% del ciclo de trabajo, que se traducen en valores de 0, 51, 102 y 153 para la funcion analogWrite().</p>
+</div>
+
+<div class="salto">
+<h1>4. Diseno del Sistema</h1>
+
+<h2>4.1 Arquitectura General</h2>
+<p>El sistema es maestro-esclavo con bus I2C. El Mega 2560 es el unico maestro y los tres Unos son esclavos con direcciones 8, 9 y 10. El Mega hace un ciclo continuo donde le pide datos a cada esclavo, procesa la informacion, actualiza la pantalla y el buzzer, y envia todo al ESP32.</p>
+
+<table>
+<tr><th>Componente</th><th>Rol</th><th>Que hace</th></tr>
+<tr><td>Arduino Mega</td><td>Maestro I2C</td><td>Centraliza datos, decide alarmas, controla LCD y buzzer, se comunica con ESP32</td></tr>
+<tr><td>Esclavo 1 (Uno)</td><td>Sala Servidores</td><td>Lee DHT11 (temp/humedad) y MQ-135 (humo), controla ventilador PWM</td></tr>
+<tr><td>Esclavo 2 (Uno)</td><td>Puertas/Acceso</td><td>Maneja servos, botones y sensor PIR, reporta estado de puertas</td></tr>
+<tr><td>Esclavo 3 (Uno)</td><td>Jardin</td><td>Lee FC-28 (humedad suelo) y DHT11, activa bomba de riego</td></tr>
+<tr><td>ESP32</td><td>Gateway WiFi</td><td>Recibe datos del Mega por UART, los envia a la API por HTTP</td></tr>
+<tr><td>API (Bun/Elysia)</td><td>Servidor REST</td><td>Recibe lecturas, las guarda en PostgreSQL, maneja comandos y usuarios</td></tr>
+</table>
+
+<p>El flujo general es: sensores en los esclavos toman lecturas, el Mega las pide por I2C, las procesa y las manda al ESP32, el ESP32 las envia a la API, y la API las guarda en la base de datos. En sentido contrario, la API puede generar comandos (como abrir puertas), el ESP32 los recoge haciendo polling, los manda al Mega, y el Mega se los reenvia al esclavo correspondiente por I2C.</p>
+
+<h2>4.2 Mapa de Conexiones</h2>
+<p>Estos son los pines que usamos en cada placa:</p>
+
+<p><strong>Arduino Mega (Maestro)</strong></p>
+<table>
+<tr><th>Pin</th><th>Conectado a</th></tr>
+<tr><td>20 (SDA)</td><td>Bus I2C - SDA de esclavos y LCD</td></tr>
+<tr><td>21 (SCL)</td><td>Bus I2C - SCL de esclavos y LCD</td></tr>
+<tr><td>18 (TX1)</td><td>TX al RX del ESP32 (via TXS0108E, lado 5V)</td></tr>
+<tr><td>19 (RX1)</td><td>RX del TX del ESP32 (via TXS0108E, lado 5V)</td></tr>
+<tr><td>8</td><td>Buzzer de alarma (positivo), negativo a GND</td></tr>
+<tr><td>GND</td><td>Tierra comun con todos los dispositivos</td></tr>
+</table>
+
+<p><strong>Esclavo 1 - Sala Servidores (Dir I2C: 8)</strong></p>
+<table>
+<tr><th>Pin</th><th>Conectado a</th></tr>
+<tr><td>A4 (SDA)</td><td>Bus I2C</td></tr>
+<tr><td>A5 (SCL)</td><td>Bus I2C</td></tr>
+<tr><td>2</td><td>DHT11 - pin de datos</td></tr>
+<tr><td>A0</td><td>MQ-135 - salida analogica</td></tr>
+<tr><td>6</td><td>Ventilador (motor DC 1.5V, control PWM)</td></tr>
+<tr><td>GND</td><td>Tierra comun</td></tr>
+</table>
+
+<p><strong>Esclavo 2 - Puertas y Acceso (Dir I2C: 9)</strong></p>
+<table>
+<tr><th>Pin</th><th>Conectado a</th></tr>
+<tr><td>A4 (SDA)</td><td>Bus I2C</td></tr>
+<tr><td>A5 (SCL)</td><td>Bus I2C</td></tr>
+<tr><td>2</td><td>Boton 1 (INPUT_PULLUP, cierra a GND)</td></tr>
+<tr><td>3</td><td>Boton 2 (INPUT_PULLUP, cierra a GND)</td></tr>
+<tr><td>4</td><td>Sensor PIR HC-SR501 (salida digital)</td></tr>
+<tr><td>7</td><td>DHT11 - pin de datos</td></tr>
+<tr><td>9</td><td>Servomotor 1 (puerta 1)</td></tr>
+<tr><td>10</td><td>Servomotor 2 (puerta 2)</td></tr>
+<tr><td>GND</td><td>Tierra comun</td></tr>
+</table>
+
+<p><strong>Esclavo 3 - Jardin (Dir I2C: 10)</strong></p>
+<table>
+<tr><th>Pin</th><th>Conectado a</th></tr>
+<tr><td>A4 (SDA)</td><td>Bus I2C</td></tr>
+<tr><td>A5 (SCL)</td><td>Bus I2C</td></tr>
+<tr><td>2</td><td>DHT11 - pin de datos</td></tr>
+<tr><td>A0</td><td>FC-28 - humedad de suelo (analogico)</td></tr>
+<tr><td>7</td><td>Modulo rele para bomba de agua</td></tr>
+<tr><td>GND</td><td>Tierra comun</td></tr>
+</table>
+
+<p><strong>ESP32 (Gateway WiFi)</strong></p>
+<table>
+<tr><th>Pin</th><th>Conectado a</th></tr>
+<tr><td>16 (RX2)</td><td>RX del TX1 del Mega (via TXS0108E, lado 3.3V)</td></tr>
+<tr><td>17 (TX2)</td><td>TX al RX1 del Mega (via TXS0108E, lado 3.3V)</td></tr>
+<tr><td>GND</td><td>Tierra comun con Mega</td></tr>
+</table>
+
+<h2>4.3 Flujo de Datos</h2>
+<p>Los sensores conectados a cada Uno hacen lecturas cada cierto tiempo. Cuando el Mega pide datos por I2C, cada esclavo responde con una cadena de texto. Por ejemplo, el esclavo 1 devuelve algo como "|1,27,65,0" que significa humo=1, temperatura=27 grados, humedad=65%, ventilador apagado.</p>
+<p>El Mega recibe las tres cadenas, las procesa y arma una linea con toda la informacion separada por pipes (|). Esa linea la manda al ESP32 por el puerto serie. El ESP32 la recibe, la separa en las tres areas, y si detecta que algun valor cambio desde la ultima vez, hace un POST a la API con los datos nuevos.</p>
+<p>Esto de solo enviar cuando hay cambios es importante para no saturar la red ni la base de datos. Por ejemplo, si la temperatura se mantiene en 27 grados durante una hora, solo se envia un POST al inicio y despues nada hasta que cambie.</p>
+</div>
+
+<div class="salto">
+<h1>5. Implementacion</h1>
+
+<h2>5.1 Esclavo 1 - Sala de Servidores</h2>
+<p>Este esclavo tiene un DHT11 para temperatura y humedad, un MQ-135 para detectar humo, y un ventilador en el pin 6 controlado por PWM. Los datos los envia por I2C con este formato: primero el valor de humo (0 o 1), luego la temperatura, luego la humedad, y por ultimo el nivel del ventilador (0 a 3).</p>
+
+<p>La deteccion de humo funciona con un algoritmo de linea base. Cuando arranca el sistema, los primeros 30 segundos se usan para calcular el valor normal del aire. Despues, si la lectura sube mas de un 5% por encima de esa linea base, se activa la alerta de humo. La linea base se va ajustando con el tiempo para adaptarse a cambios lentos del ambiente.</p>
+
+<p>El ventilador tiene cuatro velocidades que se eligen solas segun la temperatura:</p>
+
+<table>
+<tr><th>Temperatura</th><th>Lo que hace el ventilador</th></tr>
+<tr><td>Menos de 20 grados</td><td>Apagado completamente</td></tr>
+<tr><td>Entre 20 y 24 grados</td><td>Prende suave (20% de potencia)</td></tr>
+<tr><td>Entre 25 y 29 grados</td><td>Velocidad media (40% de potencia)</td></tr>
+<tr><td>30 grados o mas</td><td>Maxima velocidad (60% de potencia)</td></tr>
+</table>
+
+<p>El motor es de 1.5V pero lo alimentamos desde el pin digital del Arduino a 5V con PWM. Para no quemarlo, nunca pasamos del 60% del ciclo de trabajo, que da un voltaje promedio de unos 3V.</p>
+
+<h2>5.2 Esclavo 2 - Puertas y Acceso</h2>
+<p>Este esclavo controla dos puertas con servomotores SG90. Cada puerta tiene un boton que al presionarlo la abre por 5 segundos y luego se cierra sola. Tambien tiene un sensor PIR que detecta movimiento.</p>
+<p>Los datos que envia por I2C incluyen el estado de los botones (0 o 1), si el PIR detecto movimiento, la temperatura del DHT11 que tiene, y si cada puerta esta abierta o cerrada. Es decir: <code>btn1, btn2, pir, temperatura, puerta1, puerta2</code>.</p>
+<p>El PIR tiene un sistema para evitar falsos detectores: espera 200 milisegundos para confirmar que si hay movimiento, y una vez que detecta, espera 6 segundos antes de poder detectar otra vez. Las puertas se abren solo 5 segundos y vuelven a cerrar solas.</p>
+
+<h2>5.3 Esclavo 3 - Jardin</h2>
+<p>Este esclavo monitorea el jardin. Tiene un sensor FC-28 que mide que tan humeda esta la tierra, un DHT11 para la temperatura y humedad del ambiente, y un relé que activa una bomba de agua para regar.</p>
+<p>El sistema riega automaticamente cuando la humedad del suelo baja del 50% y para cuando llega al 70%. Tambien se puede activar el riego de forma manual desde la API si alguien lo necesita. La bomba es chica, de 3 a 5 voltios, y el rele la protege.</p>
+
+<h2>5.4 Arduino Mega - Maestro</h2>
+<p>El Mega es el cerebro de todo. En cada ciclo del programa hace varias cosas en orden:</p>
+<ul>
+<li>Revisa si el ESP32 le mando algun comando (como abrir puerta)</li>
+<li>Lee los datos del esclavo 1 por I2C</li>
+<li>Lee los datos del esclavo 2</li>
+<li>Lee los datos del esclavo 3</li>
+<li>Calcula si hay alguna condicion de alarma</li>
+<li>Manda toda la informacion al ESP32 por el puerto serie</li>
+<li>Si hay alarma, prende el buzzer unos 200 milisegundos</li>
+<li>Actualiza la pantalla LCD con la informacion de cada zona, rotando cada 3 segundos</li>
+</ul>
+<p>La pantalla LCD tiene direccion I2C 0x27 y es de 16 caracteres por 2 lineas. Muestra tres pantallas que rotan: una con los datos de servidores (humo, temperatura, humedad y si el ventilador esta prendido), otra con el estado de las puertas, y otra con los datos del jardin.</p>
+<p>Para la alarma, el Mega revisa cuatro condiciones: si se detecto humo, si la temperatura de servidores paso los 30 grados, si la temperatura del jardin paso los 45 grados, o si hay un intruso (PIR detecta movimiento con las puertas cerradas). Si alguna se cumple, prende la alarma.</p>
+
+<h2>5.5 ESP32 - Gateway</h2>
+<p>El ESP32 recibe los datos del Mega por el puerto Serial2 a 9600 baudios. Los datos llegan en una sola linea con este formato:</p>
+<p><code>Area 1: humo, temperatura, humedad, alerta, nivel ventilador | Area 2: btn1, btn2, pir, puerta1, puerta2, alerta puertas | Area 3: humedad suelo, temperatura, humedad aire</code></p>
+<p>El ESP32 separa la linea por los pipes y extrae los valores de cada area. Solo manda los datos a la API si detecta que hubo un cambio desde la ultima medicion. Esto evita enviar informacion repetida.</p>
+<p>Aparte, cada 2 segundos el ESP32 le pregunta a la API si hay comandos pendientes (como abrir una puerta). Si encuentra uno, lo manda al Mega con el formato "CMD,OPEN_DOOR_1" y marca el comando como ejecutado.</p>
+
+<h2>5.6 API y Base de Datos</h2>
+<p>La API esta hecha con Bun y el framework Elysia. Corre en el puerto 3000 de la maquina con IP 192.168.1.49. Recibe peticiones POST con los datos de cada area y las guarda en PostgreSQL. La base de datos esta en AWS RDS (Aurora PostgreSQL) con el host datacenterfk.cq3gc4ceq61b.us-east-1.rds.amazonaws.com.</p>
+<p>Las tablas que usamos son: area_servidores (temperatura, humo, humedad, alerta, fan), area_puertas (btn1, btn2, pir, puerta1, puerta2, alerta), area_jardin (humedad_suelo, temperatura, humedad_aire), y otras para usuarios, comandos, accesos y visitas. La autenticacion usa JWT con roles de admin, gerente y empleado.</p>
+
+<h2>5.7 Telegram</h2>
+<p>Integramos un bot de Telegram para mandar notificaciones. La API tiene un endpoint POST /api/telegram/enviar que recibe un mensaje y lo manda al chat del administrador usando la API de Telegram. El token del bot y el ID del chat se configuran con variables de entorno.</p>
+<p>Cuando el sistema detecta una alarma critica (humo o temperatura muy alta), puede llamar a este endpoint para avisar al instante. Para crear el bot solo se necesita hablar con @BotFather en Telegram, pedir un token nuevo, y ponerlo en el archivo .env junto con el chat ID.</p>
+</div>
+
+<div class="salto">
+<h1>6. Protocolo I2C</h1>
+<p>I2C significa Inter-Integrated Circuit y es un bus de comunicacion que invento Philips. Usa dos lineas: SDA para los datos y SCL para el reloj. Todos los dispositivos comparten las mismas lineas y cada uno tiene una direccion unica. El maestro es el que genera el reloj e inicia las comunicaciones.</p>
+<p>La comunicacion funciona asi: el maestro manda una condicion de START, luego la direccion del esclavo con un bit que dice si va a leer o escribir, el esclavo responde con un ACK (reconocimiento), y ahi empieza la transferencia de datos. Al final, el maestro manda una condicion de STOP. Todo esto pasa a 100 kHz en nuestro sistema.</p>
+<p>En Arduino usamos la libreria Wire.h. El maestro llama a Wire.requestFrom(direccion, cantidad) para pedir datos, y los esclavos usan Wire.onRequest(manejador) para registrar la funcion que envia los datos cuando el maestro pregunta. Para mandar comandos a los esclavos, el maestro usa Wire.beginTransmission(), Wire.write() y Wire.endTransmission().</p>
+
+<p>Las direcciones I2C que usamos son:</p>
+
+<table>
+<tr><th>Dispositivo</th><th>Direccion</th><th>Para que</th></tr>
+<tr><td>Esclavo 1</td><td>8 (0x08)</td><td>Servidores: DHT11, MQ-135, ventilador</td></tr>
+<tr><td>Esclavo 2</td><td>9 (0x09)</td><td>Puertas: servos, botones, PIR, DHT11</td></tr>
+<tr><td>Esclavo 3</td><td>10 (0x0A)</td><td>Jardin: FC-28, DHT11, bomba</td></tr>
+<tr><td>LCD 16x2</td><td>0x27</td><td>Pantalla de estado en el Mega</td></tr>
+</table>
+
+<p>Las conexiones fisicas son simples: el pin 20 del Mega va al A4 de cada Uno (SDA), el pin 21 va al A5 de cada Uno (SCL), y todos comparten GND. El LCD tambien se conecta a los mismos pines SDA y SCL. Aunque los modulos tienen resistencias pull-up, nosotros agregamos unas de 4.7 kiloohmios para mayor estabilidad.</p>
+
+<p>El bus I2C tiene una limitacion: mientras mas dispositivos, mas se cargan las lineas y puede haber problemas de comunicacion. Con solo 4 dispositivos (3 esclavos + LCD) no tuvimos problemas, pero en teoria se pueden conectar hasta 127.</p>
+</div>
+
+<div class="salto">
+<h1>7. Reglas del Sistema y Prioridades</h1>
+
+<h2>7.1 Como funciona el Mega</h2>
+<p>El Mega hace siempre el mismo ciclo en este orden:</p>
+<ol>
+<li>Fijarse si el ESP32 mando algun comando. Si es asi, lo procesa antes de seguir.</li>
+<li>Pedir datos al esclavo 1 por I2C, luego al 2, luego al 3. Si uno no responde, sigue con el siguiente.</li>
+<li>Decidir si hay alarma: revisa humo activo, temperatura de servidores mayor a 30, temperatura de jardin mayor a 45, o alerta de intruso.</li>
+<li>Mandar todos los datos al ESP32 por el puerto serie.</li>
+<li>Si hay alarma, hacer sonar el buzzer 200 milisegundos.</li>
+<li>Cambiar la pantalla del LCD si ya pasaron 3 segundos.</li>
+</ol>
+
+<h2>7.2 Prioridad de las Alarmas</h2>
+<p>Clasificamos las alarmas en cuatro niveles para saber que hacer en cada caso:</p>
+
+<table>
+<tr><th>Nivel</th><th>Cuando pasa</th><th>Que hace el sistema</th></tr>
+<tr><td><strong>P1 - Critica</strong></td><td>Humo detectado, o temperatura de servidores > 30, o jardin > 45</td><td>Buzzer suena, LCD dice "ALARMA", manda Telegram</td></tr>
+<tr><td><strong>P2 - Alta</strong></td><td>PIR detecta movimiento con las dos puertas cerradas</td><td>Buzzer suena, LCD dice "INTRUSO", manda Telegram</td></tr>
+<tr><td><strong>P3 - Media</strong></td><td>Temperatura entre 25 y 29 grados</td><td>Ventilador se pone en velocidad media (40%)</td></tr>
+<tr><td><strong>P4 - Baja</strong></td><td>Temperatura entre 20 y 24 grados</td><td>Ventilador se pone en velocidad baja (20%)</td></tr>
+</table>
+
+<h2>7.3 Reglas Importantes</h2>
+<ul>
+<li><strong>No saturar la base de datos:</strong> El ESP32 solo manda datos a la API cuando algo cambia. Si todo sigue igual, no manda nada.</li>
+<li><strong>Intruso condicional:</strong> La alarma de intruso solo se activa si el PIR detecta movimiento Y las puertas estan cerradas. Si una puerta esta abierta, el movimiento no genera alarma, solo se reporta como presencia.</li>
+<li><strong>Buzzer solo para P1 y P2:</strong> Las alarmas de temperatura mas bajas no hacen sonar el buzzer, solo mueven el ventilador.</li>
+<li><strong>Ventilador proporcional:</strong> La velocidad del ventilador depende de la temperatura, no es solo prender o apagar.</li>
+<li><strong>Los esclavos trabajan solos:</strong> Cada Uno lee sus sensores aunque el Mega no les pida datos. Si el Mega se desconecta, ellos siguen funcionando.</li>
+<li><strong>Linea base del MQ-135:</strong> El sensor de humo se calibra solo durante los primeros 30 segundos y se sigue ajustando con el tiempo para evitar falsas alarmas.</li>
+<li><strong>Puertas con temporizador:</strong> Las puertas se abren 5 segundos y se cierran solas, no quedan abiertas.</li>
+<li><strong>Pantalla rotativa:</strong> El LCD cambia de vista cada 3 segundos para mostrar servidores, puertas y jardin.</li>
+</ul>
+</div>
+
+<div class="salto">
+<h1>8. Endpoints de la API</h1>
+<p>La API corre en http://192.168.1.49:3000. Todos los endpoints que usamos son:</p>
+
+<table>
+<tr><th>Metodo</th><th>Ruta</th><th>Descripcion</th></tr>
+<tr><td>GET</td><td>/api/health</td><td>Verifica que el servidor este vivo</td></tr>
+<tr><td>GET</td><td>/testconnection</td><td>Prueba conexion a la base de datos</td></tr>
+<tr><td>POST</td><td>/api/db/init</td><td>Crea todas las tablas en PostgreSQL</td></tr>
+<tr><td>POST</td><td>/auth/registro</td><td>Registra un usuario nuevo (solo admin)</td></tr>
+<tr><td>POST</td><td>/auth/login</td><td>Inicia sesion y devuelve un token JWT</td></tr>
+<tr><td>POST</td><td>/auth/me</td><td>Muestra los datos del usuario logueado</td></tr>
+<tr><td>POST</td><td>/area/servidores</td><td>Guarda lectura de servidores: temperatura, humo, humedad, alerta, fan</td></tr>
+<tr><td>GET</td><td>/area/servidores</td><td>Trae las ultimas 20 lecturas de servidores</td></tr>
+<tr><td>POST</td><td>/area/puertas</td><td>Guarda estado de puertas: btn1, btn2, pir, puerta1, puerta2, alerta</td></tr>
+<tr><td>GET</td><td>/area/puertas</td><td>Trae los ultimos 20 registros de puertas</td></tr>
+<tr><td>POST</td><td>/area/jardin</td><td>Guarda lectura de jardin: humedad_suelo, temperatura, humedad_aire</td></tr>
+<tr><td>GET</td><td>/area/jardin</td><td>Trae las ultimas 20 lecturas de jardin</td></tr>
+<tr><td>POST</td><td>/api/telegram/enviar</td><td>Manda un mensaje al chat de Telegram</td></tr>
+<tr><td>GET</td><td>/api/comandos/pendientes</td><td>Devuelve comandos IoT que esperan ser ejecutados</td></tr>
+<tr><td>POST</td><td>/api/comandos/:id/ejecutar</td><td>Marca un comando como ya ejecutado</td></tr>
+<tr><td>POST</td><td>/api/acceso/puerta-1</td><td>Abre la puerta 1 (requiere token)</td></tr>
+<tr><td>POST</td><td>/api/acceso/puerta-2</td><td>Abre la puerta 2 (requiere visita aprobada)</td></tr>
+<tr><td>GET</td><td>/api/usuarios</td><td>Lista todos los usuarios (solo admin)</td></tr>
+<tr><td>POST</td><td>/api/visitas</td><td>Crea una solicitud de visita</td></tr>
+<tr><td>POST</td><td>/api/visitas/:id/aprobar</td><td>Aprueba una visita y genera codigo NFC</td></tr>
+</table>
+
+<p>Por ejemplo, cuando el ESP32 manda datos de la sala de servidores, hace un POST a /area/servidores con un JSON como este: { "temperatura": 27, "humo": 0, "humedad": 65, "alerta": 0, "fan": 1 }. La API responde con {"estado": "ok", "mensaje": "Guardado"} si todo sale bien.</p>
+</div>
+
+<div class="salto">
+<h1>9. Resultados Obtenidos</h1>
+
+<h2>9.1 Comunicacion I2C</h2>
+<p>Probamos la comunicacion entre el Mega y los tres Unos y funciona bien. El Mega puede leer los tres esclavos en menos de 200 milisegundos, lo que deja suficiente tiempo para el resto del ciclo.</p>
+
+<h2>9.2 Comunicacion UART</h2>
+<p>El TXS0108E funciona para pasar los datos de 5V a 3.3V y viceversa. A veces se pierde el primer byte cuando se conecta, pero el codigo ya tiene una forma de recuperarse: el Mega espera medio milisegundo antes de mandar datos, y el ESP32 puede detectar si la linea empieza con coma para arreglarla.</p>
+
+<h2>9.3 Deteccion de Humo</h2>
+<p>El algoritmo de linea base para el MQ-135 funciona. Se estabiliza en unos 30 segundos y el delta del 5% permite detectar humo sin que el cambio normal del aire dispare falsas alarmas.</p>
+
+<h2>9.4 Alarma de Intruso</h2>
+<p>La logica de PIR + puertas cerradas funciona bien. Si alguien se mueve con las puertas cerradas, suena la alarma y la pantalla muestra "INTRUSO". Si una puerta esta abierta, el movimiento se reporta normal sin alarma.</p>
+
+<h2>9.5 Ventilador PWM</h2>
+<p>El motor responde a los cuatro niveles de velocidad y no se calienta ni se quema con el PWM al 60%. La transicion entre velocidades es inmediata.</p>
+
+<h2>9.6 Tiempos de Respuesta</h2>
+
+<table>
+<tr><th>Operacion</th><th>Tiempo</th></tr>
+<tr><td>Leer los 3 esclavos por I2C</td><td>Menos de 200 ms</td></tr>
+<tr><td>Detectar humo hasta que suena el buzzer</td><td>Menos de 300 ms</td></tr>
+<tr><td>Detectar movimiento PIR hasta alerta</td><td>Menos de 500 ms</td></tr>
+<tr><td>Cambiar velocidad del ventilador</td><td>Instantaneo</td></tr>
+<tr><td>Enviar datos del ESP32 a la API</td><td>Menos de 100 ms</td></tr>
+<tr><td>Guardar en PostgreSQL</td><td>Menos de 50 ms</td></tr>
+</table>
+</div>
+
+<div class="salto">
+<h1>10. Conclusiones</h1>
+<p>El proyecto logro su objetivo principal: construir un sistema distribuido de monitoreo y control para un Data Center usando microcontroladores Arduino. La arquitectura maestro-esclavo con I2C funciona bien y demuestra en la practica como se comunican varios procesadores en un mismo bus.</p>
+<p>El sistema de alarmas con prioridades (P1 a P4) es un ejemplo claro de como se manejan las interrupciones en un sistema embebido: el Mega evalua constantemente las condiciones y responde segun la gravedad del evento, igual que un controlador de interrupciones.</p>
+<p>El control PWM del ventilador muestra como una senal digital puede controlar la potencia de un motor variando el ciclo de trabajo, que es uno de los temas clave del curso.</p>
+<p>La conexion con AWS (aunque sea via API REST y no directo por MQTT) demuestra la jerarquia de memoria del sistema: los datos viajan desde la RAM del microcontrolador hasta la nube, pasando por I2C, UART y WiFi.</p>
+<p>El protocolo I2C funciono sin problemas con los 4 dispositivos en el bus (3 esclavos + LCD). Es un protocolo simple pero efectivo para sistemas embebidos donde no se necesitan velocidades muy altas.</p>
+
+<h2>10.1 Cosas que faltaron o se podrian mejorar</h2>
+<ul>
+<li>No pudimos implementar el sensor INA219 para medir consumo de energia, asi que el modo de ahorro por bateria baja no esta disponible.</li>
+<li>Tampoco tenemos el modulo Bluetooth HC-04 que estaba en el diseno original.</li>
+<li>Los paneles solares que tenemos generan poca energia, no son suficientes para alimentar todo el sistema.</li>
+<li>El acceso por NFC funciona con stickers y verificacion por API, no con modulo RFID fisico como se habia planeado.</li>
+<li>Falta implementar MQTT para conectar directamente con AWS IoT Core, por ahora usamos HTTPS.</li>
+<li>Se podria agregar un watchdog por hardware para que el Mega se reinicie solo si se cuelga.</li>
+</ul>
+</div>
+
+<div class="salto">
+<h1>11. Referencias</h1>
+
+<p class="ref">Atmel Corporation. (2014). ATmega640/1280/1281/2560/2561 Datasheet. Documento tecnico.</p>
+
+<p class="ref">Banzi, M., & Shiloh, M. (2014). Getting Started with Arduino (3ra ed.). Maker Media.</p>
+
+<p class="ref">Espressif Systems. (2023). ESP32 Series Datasheet. Documento tecnico.</p>
+
+<p class="ref">NXP Semiconductors. (2014). UM10204 I2C-bus specification and user manual. Documento tecnico.</p>
+
+<p class="ref">Patterson, D. A., & Hennessy, J. L. (2017). Computer Organization and Design (5ta ed.). Morgan Kaufmann.</p>
+
+<p class="ref">Stallings, W. (2018). Computer Organization and Architecture (11va ed.). Pearson.</p>
+
+<p class="ref">Telegram Messenger Inc. (2026). Telegram Bot API. Documentacion oficial.</p>
+
+<p class="ref">UMG, Arquitectura de Computadoras I. (2026). Proyecto: Data Center Automatizado - Enunciado. Universidad Mariano Galvez.</p>
+</div>
+
+<div class="salto">
+<h1>12. Anexos</h1>
+
+<h2>A. Enlaces</h2>
+<ul>
+<li>Repositorio GitHub: [URL]</li>
+<li>Video demostrativo: [URL]</li>
+<li>Blog del proyecto: [URL]</li>
+</ul>
+
+<h2>B. Componentes usados</h2>
+<table>
+<tr><th>Componente</th><th>Cantidad</th><th>Uso</th></tr>
+<tr><td>Arduino Mega 2560</td><td>1</td><td>Maestro I2C</td></tr>
+<tr><td>Arduino Uno</td><td>3</td><td>Esclavos I2C</td></tr>
+<tr><td>ESP32 DevKit</td><td>1</td><td>Gateway WiFi</td></tr>
+<tr><td>DHT11</td><td>3</td><td>Temperatura y humedad</td></tr>
+<tr><td>MQ-135</td><td>1</td><td>Detector de humo</td></tr>
+<tr><td>FC-28</td><td>1</td><td>Humedad de suelo</td></tr>
+<tr><td>PIR HC-SR501</td><td>1</td><td>Deteccion de movimiento</td></tr>
+<tr><td>Servomotor SG90</td><td>2</td><td>Abrir puertas</td></tr>
+<tr><td>Ventilador DC 1.5V</td><td>1</td><td>Enfriamiento</td></tr>
+<tr><td>Bomba de agua mini</td><td>1</td><td>Riego</td></tr>
+<tr><td>Buzzer 5V</td><td>1</td><td>Alarma</td></tr>
+<tr><td>LCD 16x2 I2C</td><td>1</td><td>Pantalla del Mega</td></tr>
+<tr><td>Rele 1 canal</td><td>1</td><td>Bomba de agua</td></tr>
+<tr><td>TXS0108E</td><td>1</td><td>Convertidor 5V a 3.3V</td></tr>
+<tr><td>Panel solar 5V</td><td>1</td><td>Fuente de energia (limitada)</td></tr>
+</table>
+
+<h2>C. Archivos del proyecto</h2>
+<ul>
+<li>MakeFile - para iniciar la API con make run</li>
+<li>arduin_mega/arduin_mega.ino - codigo del maestro</li>
+<li>esclavo1/esclavo1.ino - codigo de sala servidores</li>
+<li>esclavo2/esclavo2.ino - codigo de puertas</li>
+<li>esclavo3/esclavo3.ino - codigo de jardin</li>
+<li>Esp32/Esp32.ino - codigo del gateway</li>
+<li>DataCenter/server.js - API REST</li>
+<li>DataCenter/Services/conection.js - conexion a PostgreSQL</li>
+<li>DataCenter/reporte.html - este documento</li>
+</ul>
+
+<h2>D. El bus I2C en la practica</h2>
+<p>Las conexiones del I2C son asi: el SDA del Mega (pin 20) va al A4 de cada Uno y al SDA del LCD. El SCL del Mega (pin 21) va al A5 de cada Uno y al SCL del LCD. Todo comparte GND. Ponemos resistencias de 4.7 kiloohmios entre SDA y 5V, y entre SCL y 5V, para que la senal se mantenga estable. El bus trabaja a 5V porque el Mega y los Unos son de 5V, y el LCD tambien soporta 5V.</p>
+
+</div>
+
+<p class="page-num">Universidad Mariano Galvez - Arquitectura de Computadoras I - 2026</p>
+
+</body>
+</html>

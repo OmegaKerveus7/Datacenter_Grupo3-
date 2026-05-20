@@ -15,15 +15,17 @@ export function AuthProvider({ children }) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
       getMe(savedToken).then((res) => {
-        if (res.usuario) {
+        if (res && res.usuario) {
           setUser(res.usuario);
           localStorage.setItem('user', JSON.stringify(res.usuario));
         } else {
           logout();
         }
+        setLoading(false);
       });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   function loginUser(token, userData) {

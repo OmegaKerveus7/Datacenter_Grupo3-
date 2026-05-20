@@ -1,4 +1,4 @@
-const API = 'http://192.168.1.49:3000';
+const API = '';
 
 export async function solicitarVisita(token, motivo, horaProgramada) {
   const res = await fetch(`${API}/api/visitas`, {
@@ -58,6 +58,15 @@ export async function rechazarVisita(token, id) {
     headers: {
       'Authorization': `Bearer ${token}`
     }
+  });
+  return res.json();
+}
+
+export async function accesoNFC(codigo_nfc) {
+  const res = await fetch(`${API}/api/acceso/nfc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codigo_nfc })
   });
   return res.json();
 }

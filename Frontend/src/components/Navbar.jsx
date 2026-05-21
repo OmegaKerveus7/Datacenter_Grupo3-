@@ -25,6 +25,9 @@ export default function Navbar() {
         {(user.rol === 'gerente' || user.rol === 'admin') && (
           <Link to="/panel-visitas" style={styles.link}>Panel Visitas</Link>
         )}
+        {(user.rol === 'gerente' || user.rol === 'admin') && (
+          <Link to="/monitoreo" style={styles.link}>Monitoreo</Link>
+        )}
         {user.rol === 'admin' && (
           <Link to="/gestion-usuarios" style={styles.link}>Usuarios</Link>
         )}

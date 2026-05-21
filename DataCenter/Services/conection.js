@@ -4,41 +4,43 @@ class Conection {
 
     constructor() {
 
-        this.client = new pg.Client({
-            host: "datacenterfk.cq3gc4ceq61b.us-east-1.rds.amazonaws.com",
-            user: "adminfk",
-            password: "Sql.postgresFK",
-            database: "postgres",
-            port: 5432,
-            ssl: {
-                rejectUnauthorized: false
-            }
-        });
+        this._client = null;
+        this._connecting = null;
+    }
 
-        this.connected = false;
+    async _getClient() {
+
+        if (this._client) return this._client;
+
+        if (this._connecting) return this._connecting;
+
+        this._connecting = (async () => {
+
+            const c = new pg.Client({
+                host: "datacenterfk.cq3gc4ceq61b.us-east-1.rds.amazonaws.com",
+                user: "adminfk",
+                password: "Sql.postgresFK",
+                database: "postgres",
+                port: 5432,
+                ssl: { rejectUnauthorized: false }
+            });
+
+            await c.connect();
+
+            console.log("PostgreSQL conectado");
+
+            this._client = c;
+            this._connecting = null;
+
+            return c;
+        })();
+
+        return this._connecting;
     }
 
     async connect() {
 
-        try {
-
-            if (!this.connected) {
-
-                await this.client.connect();
-
-                this.connected = true;
-
-                console.log("PostgreSQL conectado");
-            }
-
-            return this.client;
-
-        } catch (error) {
-
-            console.log("Error PostgreSQL:", error.message);
-
-            throw error;
-        }
+        return await this._getClient();
     }
 
     async testConnection() {

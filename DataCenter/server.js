@@ -646,6 +646,34 @@ app.get('/api/accesos', async ({ jwt, headers, set }) => {
     }
 });
 
+// ============ MONITOREO (unifica ultimos datos de todas las areas) ============
+
+app.get('/api/monitoreo', async ({ jwt, headers, set }) => {
+
+    try {
+        const payload = await authGuard({ jwt, headers, set });
+
+        if (payload && payload.error) return payload;
+
+        const client = await Conection.connect();
+
+        const srv = await client.query(`SELECT temperatura, humo, humedad, alerta, fan, created_at FROM area_servidores ORDER BY created_at DESC LIMIT 1`);
+        const pue = await client.query(`SELECT btn1, btn2, pir, puerta1, puerta2, alerta, created_at FROM area_puertas ORDER BY created_at DESC LIMIT 1`);
+        const jar = await client.query(`SELECT humedad_suelo, temperatura, humedad_aire, created_at FROM area_jardin ORDER BY created_at DESC LIMIT 1`);
+
+        return {
+            servidores: srv.rows[0] || null,
+            puertas: pue.rows[0] || null,
+            jardin: jar.rows[0] || null
+        };
+
+    } catch (error) {
+
+        set.status = 500;
+        return { error: error.message };
+    }
+});
+
 // ============ EXISTENTES ============
 
 app.post('/area/servidores', async ({ body }) => {

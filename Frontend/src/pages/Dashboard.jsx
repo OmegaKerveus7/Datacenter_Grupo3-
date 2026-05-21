@@ -48,14 +48,16 @@ export default function Dashboard() {
           <button onClick={handleAbrirPuerta1} disabled={loading1} style={styles.btn}>
             {loading1 ? 'Abriendo...' : 'Abrir Puerta 1'}
           </button>
-          <button onClick={handleAbrirPuerta2} disabled={loading2} style={{ ...styles.btn, background: '#0f3460' }}>
-            {loading2 ? 'Abriendo...' : 'Abrir Puerta 2'}
-          </button>
+          {(user.rol === 'gerente' || user.rol === 'admin') && (
+            <button onClick={handleAbrirPuerta2} disabled={loading2} style={{ ...styles.btn, background: '#0f3460' }}>
+              {loading2 ? 'Abriendo...' : 'Abrir Puerta 2'}
+            </button>
+          )}
         </div>
 
         <div style={styles.info}>
-          <p>Puerta 1: Acceso simple (solo autenticación)</p>
-          <p>Puerta 2: Pruebas (mismo comportamiento que puerta 1)</p>
+          <p>Puerta 1: Acceso remoto (autenticación)</p>
+          <p>Puerta 2: Acceso mediante NFC (solo empleados)</p>
         </div>
       </div>
     </div>

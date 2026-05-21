@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { obtenerPendientes, obtenerTodasVisitas, aprobarVisita, rechazarVisita } from '../api/visitas';
+import { obtenerPendientes, obtenerTodasVisitas, aprobarVisita, rechazarVisita, modificarFechaVisita } from '../api/visitas';
 
 export default function PanelVisitas() {
   const { user, token } = useAuth();
@@ -9,14 +9,13 @@ export default function PanelVisitas() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState('pendientes');
+  const [editFecha, setEditFecha] = useState({});
 
   async function load() {
     setLoading(true);
     const fn = tab === 'todas' ? obtenerTodasVisitas : obtenerPendientes;
     const res = await fn(token);
-    if (Array.isArray(res)) {
-      setVisitas(res);
-    }
+    if (Array.isArray(res)) setVisitas(res);
     setLoading(false);
   }
 
@@ -26,7 +25,7 @@ export default function PanelVisitas() {
     setMsg(''); setError('');
     const res = await aprobarVisita(token, id);
     if (res.estado === 'ok') {
-      setMsg(`Visita #${id} aprobada. Código NFC: ${res.solicitud.codigo_nfc}`);
+      setMsg(`Visita #${id} aprobada`);
       load();
     } else {
       setError(res.error || 'Error al aprobar');
@@ -44,8 +43,28 @@ export default function PanelVisitas() {
     }
   }
 
+  async function handleModificarFecha(id) {
+    const fecha = editFecha[id];
+    if (!fecha) return;
+    setMsg(''); setError('');
+    const res = await modificarFechaVisita(token, id, fecha);
+    if (res.estado === 'ok') {
+      setMsg(`Visita #${id} fecha actualizada a ${formatDate(fecha)}`);
+      setEditFecha((prev) => ({ ...prev, [id]: undefined }));
+      load();
+    } else {
+      setError(res.error || 'Error al modificar fecha');
+    }
+  }
+
   function formatDate(d) {
     return new Date(d).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  function formatDateInput(d) {
+    const dt = new Date(d);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
   }
 
   function getStatusColor(estado) {
@@ -95,7 +114,6 @@ export default function PanelVisitas() {
                   <th>Fecha Prog.</th>
                   <th>Motivo</th>
                   <th>Estado</th>
-                  <th>Código NFC</th>
                   <th>Acción</th>
                 </tr>
               </thead>
@@ -104,15 +122,32 @@ export default function PanelVisitas() {
                   <tr key={v.id}>
                     <td>{v.id}</td>
                     <td>{v.solicitante_nombre || v.solicitante_email}</td>
-                    <td>{formatDate(v.hora_programada)}</td>
+                    <td style={{ fontSize: '0.8em' }}>
+                      {editFecha[v.id] !== undefined ? (
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <input
+                            type="datetime-local"
+                            value={editFecha[v.id]}
+                            onChange={(e) => setEditFecha((prev) => ({ ...prev, [v.id]: e.target.value }))}
+                            style={styles.dateInput}
+                          />
+                          <button onClick={() => handleModificarFecha(v.id)} style={styles.btnSave}>Guardar</button>
+                          <button onClick={() => setEditFecha((prev) => ({ ...prev, [v.id]: undefined }))} style={styles.btnCancel}>X</button>
+                        </div>
+                      ) : (
+                        <span>
+                          {formatDate(v.hora_programada)}
+                          <button onClick={() => setEditFecha((prev) => ({ ...prev, [v.id]: formatDateInput(v.hora_programada) }))} style={styles.btnEditFecha} title="Modificar fecha">
+                            ✏️
+                          </button>
+                        </span>
+                      )}
+                    </td>
                     <td style={{ maxWidth: '200px', wordBreak: 'break-word' }}>{v.motivo}</td>
                     <td>
                       <span style={{ ...styles.status, background: getStatusColor(v.estado) }}>
                         {v.estado}
                       </span>
-                    </td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>
-                      {v.codigo_nfc || '---'}
                     </td>
                     <td>
                       {v.estado === 'pendiente' && (
@@ -156,6 +191,22 @@ const styles = {
   status: {
     padding: '3px 10px', borderRadius: '4px', color: 'white',
     fontSize: '0.8em', textTransform: 'capitalize'
+  },
+  dateInput: {
+    background: '#16213e', color: 'white', border: '1px solid #333',
+    borderRadius: '4px', padding: '3px', fontSize: '0.8em', colorScheme: 'dark'
+  },
+  btnEditFecha: {
+    background: 'transparent', border: 'none', cursor: 'pointer',
+    fontSize: '0.9em', marginLeft: '5px'
+  },
+  btnSave: {
+    background: '#00b894', color: 'white', border: 'none',
+    padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75em'
+  },
+  btnCancel: {
+    background: '#636e72', color: 'white', border: 'none',
+    padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75em'
   },
   btnAprobar: {
     background: '#00b894', color: 'white', border: 'none',

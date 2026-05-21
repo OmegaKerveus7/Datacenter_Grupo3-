@@ -55,7 +55,7 @@ export default function Dashboard() {
 
         <div style={styles.info}>
           <p>Puerta 1: Acceso simple (solo autenticación)</p>
-          <p>Puerta 2: Requiere visita programada aprobada + NFC verificado</p>
+          <p>Puerta 2: Pruebas (mismo comportamiento que puerta 1)</p>
         </div>
       </div>
     </div>

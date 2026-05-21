@@ -50,7 +50,6 @@ export default function MisVisitas() {
                   <th>Fecha</th>
                   <th>Motivo</th>
                   <th>Estado</th>
-                  <th>Código NFC</th>
                   <th>Acción</th>
                 </tr>
               </thead>
@@ -63,9 +62,6 @@ export default function MisVisitas() {
                       <span style={{ ...styles.status, background: getStatusColor(v.estado) }}>
                         {v.estado}
                       </span>
-                    </td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.9em' }}>
-                      {v.codigo_nfc || '---'}
                     </td>
                     <td>
                       {v.estado === 'aprobada' && (

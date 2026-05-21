@@ -22,7 +22,6 @@ export default function Navbar() {
         <Link to="/dashboard" style={styles.link}>Inicio</Link>
         <Link to="/solicitar-visita" style={styles.link}>Solicitar Visita</Link>
         <Link to="/mis-visitas" style={styles.link}>Mis Visitas</Link>
-        <Link to="/verificar-nfc" style={styles.link}>Acceso NFC</Link>
         {(user.rol === 'gerente' || user.rol === 'admin') && (
           <Link to="/panel-visitas" style={styles.link}>Panel Visitas</Link>
         )}

@@ -62,23 +62,26 @@ export async function rechazarVisita(token, id) {
   return res.json();
 }
 
-export async function accesoNFC(codigo_nfc) {
+export async function accesoNFC(token, codigo_nfc) {
   const res = await fetch(`${API}/api/acceso/nfc`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ codigo_nfc })
-  });
-  return res.json();
-}
-
-export async function verificarNFC(token, id, codigoNfc) {
-  const res = await fetch(`${API}/api/visitas/${id}/verificar-nfc`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ codigo_nfc: codigoNfc })
+    body: JSON.stringify({ codigo_nfc })
+  });
+  return res.json();
+}
+
+export async function modificarFechaVisita(token, id, horaProgramada) {
+  const res = await fetch(`${API}/api/visitas/${id}/fecha`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ hora_programada: horaProgramada })
   });
   return res.json();
 }

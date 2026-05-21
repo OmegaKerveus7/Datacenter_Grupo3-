@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS usuarios (
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     rol VARCHAR(20) NOT NULL DEFAULT 'empleado',
-    codigo_nfc VARCHAR(100) UNIQUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -58,22 +57,12 @@ CREATE TABLE IF NOT EXISTS accesos_puertas (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS intentos_intrusos (
-    id SERIAL PRIMARY KEY,
-    codigo_nfc VARCHAR(100),
-    ip VARCHAR(50),
-    user_agent TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 CREATE TABLE IF NOT EXISTS solicitudes_visita (
     id SERIAL PRIMARY KEY,
     solicitante_id INTEGER REFERENCES usuarios(id) NOT NULL,
     motivo TEXT NOT NULL,
     hora_programada TIMESTAMPTZ NOT NULL,
-    codigo_nfc VARCHAR(100),
     estado VARCHAR(20) DEFAULT 'pendiente',
-    nfc_verificado BOOLEAN DEFAULT FALSE,
     aprobado_por INTEGER REFERENCES usuarios(id),
     rechazado_por INTEGER REFERENCES usuarios(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),

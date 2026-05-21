@@ -175,8 +175,7 @@ app.post('/auth/login', async ({ body, jwt, set }) => {
                 id: usuario.id,
                 nombre: usuario.nombre,
                 email: usuario.email,
-                rol: usuario.rol,
-                codigo_nfc: usuario.codigo_nfc
+                rol: usuario.rol
             }
         };
 
@@ -230,7 +229,7 @@ app.post('/api/acceso/puerta-1', async ({ jwt, headers, set }) => {
     }
 });
 
-// ============ PUERTA 2 (con verificación de visita) ============
+// ============ PUERTA 2 (temporal: igual que puerta 1 para pruebas) ============
 
 app.post('/api/acceso/puerta-2', async ({ jwt, headers, set }) => {
 
@@ -239,16 +238,6 @@ app.post('/api/acceso/puerta-2', async ({ jwt, headers, set }) => {
 
         if (payload && payload.error) return payload;
 
-        const visita = await Conection.obtenerVisitaAprobadaActiva(payload.id);
-
-        if (!visita) {
-
-            set.status = 403;
-            return {
-                error: "No tienes una visita aprobada activa. Debes tener una visita aprobada con NFC verificado dentro de la ventana de 5 minutos."
-            };
-        }
-
         const comando = await Conection.crearComando('OPEN_DOOR_2', null);
 
         await Conection.registrarAcceso(payload.id, 2, 'remoto');
@@ -256,8 +245,7 @@ app.post('/api/acceso/puerta-2', async ({ jwt, headers, set }) => {
         return {
             estado: "ok",
             mensaje: "Puerta 2 abierta",
-            comandoId: comando.id,
-            visitaId: visita.id
+            comandoId: comando.id
         };
 
     } catch (error) {
@@ -267,48 +255,39 @@ app.post('/api/acceso/puerta-2', async ({ jwt, headers, set }) => {
     }
 });
 
-// ============ ACCESO NFC (llave del chip como codigo) ============
+// ============ ACCESO NFC (valida key de puerta + visita del usuario autenticado) ============
 
-app.post('/api/acceso/nfc', async ({ body, set, request }) => {
+const PUERTA2_KEY = '7C:B3:70:51';
+
+app.post('/api/acceso/nfc', async ({ body, jwt, headers, set, request }) => {
 
     try {
+        const payload = await authGuard({ jwt, headers, set });
+
+        if (payload && payload.error) return payload;
+
         const { codigo_nfc } = body;
 
-        if (!codigo_nfc) {
-            set.status = 400;
-            return { error: "No tiene acceso" };
-        }
-
-        const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'desconocida';
-        const ua = request.headers.get('user-agent') || '';
-
-        const usuario = await Conection.buscarUsuarioPorNfc(codigo_nfc);
-
-        if (!usuario) {
-            await Conection.registrarIntentoIntruso(codigo_nfc, ip, ua);
+        if (codigo_nfc !== PUERTA2_KEY) {
             set.status = 403;
             return { error: "No tiene acceso" };
         }
 
-        const visita = await Conection.obtenerVisitaAprobadaPorUsuario(usuario.id);
+        const visita = await Conection.obtenerVisitaAprobadaPorUsuario(payload.id);
 
         if (!visita) {
-            await Conection.registrarIntentoIntruso(codigo_nfc, ip, ua);
+            await Conection.expirarVisitasVencidas(payload.id);
             set.status = 403;
             return { error: "No tiene visita programada para esta hora" };
         }
 
-        // Marcar NFC como verificado (directo, sin validar codigo_nfc del registro)
-        await Conection.marcarNfcVerificado(visita.id);
-
-        // Crear comando y log de acceso
         const comando = await Conection.crearComando('OPEN_DOOR_2');
 
-        await Conection.registrarAcceso(usuario.id, 2, 'nfc');
+        await Conection.registrarAcceso(payload.id, 2, 'nfc');
 
         return {
             estado: "ok",
-            mensaje: `Bienvenido ${usuario.nombre}, puerta 2 abierta`,
+            mensaje: `Bienvenido ${payload.nombre}, puerta 2 abierta`,
             comandoId: comando.id
         };
 
@@ -464,30 +443,34 @@ app.post('/api/visitas/:id/rechazar', async ({ params, jwt, headers, set }) => {
     }
 });
 
-app.post('/api/visitas/:id/verificar-nfc', async ({ params, body, jwt, headers, set }) => {
+app.put('/api/visitas/:id/fecha', async ({ params, body, jwt, headers, set }) => {
 
     try {
         const payload = await authGuard({ jwt, headers, set });
 
         if (payload && payload.error) return payload;
 
-        const { codigo_nfc } = body;
+        const check = await rolGuard(payload, ['admin', 'gerente'], set);
 
-        if (!codigo_nfc) {
+        if (check && check.error) return check;
 
-            set.status = 400;
-            return { error: "Código NFC requerido" };
-        }
+        const { hora_programada } = body;
 
-        const resultado = await Conection.verificarNFC(parseInt(params.id), codigo_nfc);
-
-        if (!resultado.valido) {
+        if (!hora_programada) {
 
             set.status = 400;
-            return { error: resultado.error };
+            return { error: "hora_programada es requerida" };
         }
 
-        return { estado: "ok", mensaje: resultado.mensaje };
+        const solicitud = await Conection.actualizarFechaSolicitud(parseInt(params.id), hora_programada);
+
+        if (!solicitud) {
+
+            set.status = 404;
+            return { error: "Solicitud no encontrada" };
+        }
+
+        return { estado: "ok", solicitud };
 
     } catch (error) {
 

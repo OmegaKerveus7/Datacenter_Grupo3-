@@ -68,7 +68,6 @@ class Conection {
                 email VARCHAR(100) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
                 rol VARCHAR(20) NOT NULL DEFAULT 'empleado',
-                codigo_nfc VARCHAR(100) UNIQUE,
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         `);
@@ -95,10 +94,6 @@ class Conection {
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )
         `);
-
-        // Migracion: agregar columna si la tabla ya existia sin ella
-        try { await client.query(`ALTER TABLE area_servidores ADD COLUMN IF NOT EXISTS humedad INT DEFAULT 0`); } catch (e) {}
-        try { await client.query(`ALTER TABLE area_servidores ADD COLUMN IF NOT EXISTS fan INT DEFAULT 0`); } catch (e) {}
 
         await client.query(`
             CREATE TABLE IF NOT EXISTS area_jardin (
@@ -134,24 +129,12 @@ class Conection {
         `);
 
         await client.query(`
-            CREATE TABLE IF NOT EXISTS intentos_intrusos (
-                id SERIAL PRIMARY KEY,
-                codigo_nfc VARCHAR(100),
-                ip VARCHAR(50),
-                user_agent TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        `);
-
-        await client.query(`
             CREATE TABLE IF NOT EXISTS solicitudes_visita (
                 id SERIAL PRIMARY KEY,
                 solicitante_id INTEGER REFERENCES usuarios(id) NOT NULL,
                 motivo TEXT NOT NULL,
                 hora_programada TIMESTAMPTZ NOT NULL,
-                codigo_nfc VARCHAR(100),
                 estado VARCHAR(20) DEFAULT 'pendiente',
-                nfc_verificado BOOLEAN DEFAULT FALSE,
                 aprobado_por INTEGER REFERENCES usuarios(id),
                 rechazado_por INTEGER REFERENCES usuarios(id),
                 created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -166,12 +149,10 @@ class Conection {
 
         const client = await this.connect();
 
-        const codigoNfc = crypto.randomUUID().slice(0, 10).toUpperCase();
-
         const result = await client.query(
-            `INSERT INTO usuarios (nombre, email, password_hash, rol, codigo_nfc)
-             VALUES ($1, $2, $3, $4, $5) RETURNING id, nombre, email, rol, codigo_nfc, created_at`,
-            [nombre, email, passwordHash, rol, codigoNfc]
+            `INSERT INTO usuarios (nombre, email, password_hash, rol)
+             VALUES ($1, $2, $3, $4) RETURNING id, nombre, email, rol, created_at`,
+            [nombre, email, passwordHash, rol]
         );
 
         return result.rows[0];
@@ -182,7 +163,7 @@ class Conection {
         const client = await this.connect();
 
         const result = await client.query(
-            `SELECT id, nombre, email, password_hash, rol, codigo_nfc, created_at
+            `SELECT id, nombre, email, password_hash, rol, created_at
              FROM usuarios WHERE email = $1`,
             [email]
         );
@@ -195,22 +176,9 @@ class Conection {
         const client = await this.connect();
 
         const result = await client.query(
-            `SELECT id, nombre, email, rol, codigo_nfc, created_at
+            `SELECT id, nombre, email, rol, created_at
              FROM usuarios WHERE id = $1`,
             [id]
-        );
-
-        return result.rows[0] || null;
-    }
-
-    async buscarUsuarioPorNfc(urlNfc) {
-
-        const client = await this.connect();
-
-        const result = await client.query(
-            `SELECT id, nombre, email, rol, codigo_nfc, created_at
-             FROM usuarios WHERE codigo_nfc = $1`,
-            [urlNfc]
         );
 
         return result.rows[0] || null;
@@ -221,7 +189,7 @@ class Conection {
         const client = await this.connect();
 
         const result = await client.query(
-            `SELECT id, nombre, email, rol, codigo_nfc, created_at
+            `SELECT id, nombre, email, rol, created_at
              FROM usuarios ORDER BY created_at DESC`
         );
 
@@ -239,7 +207,6 @@ class Conection {
         if (data.nombre !== undefined) { sets.push(`nombre = $${idx++}`); valores.push(data.nombre); }
         if (data.email !== undefined) { sets.push(`email = $${idx++}`); valores.push(data.email); }
         if (data.rol !== undefined) { sets.push(`rol = $${idx++}`); valores.push(data.rol); }
-        if (data.codigo_nfc !== undefined) { sets.push(`codigo_nfc = $${idx++}`); valores.push(data.codigo_nfc); }
 
         if (sets.length === 0) return null;
 
@@ -247,7 +214,7 @@ class Conection {
 
         const result = await client.query(
             `UPDATE usuarios SET ${sets.join(', ')} WHERE id = $${idx}
-             RETURNING id, nombre, email, rol, codigo_nfc, created_at`,
+             RETURNING id, nombre, email, rol, created_at`,
             valores
         );
 
@@ -398,14 +365,13 @@ class Conection {
 
         const client = await this.connect();
 
-        const codigoNfc = crypto.randomUUID().slice(0, 8).toUpperCase();
-
         const result = await client.query(
-            `UPDATE solicitudes_visita
-             SET estado = 'aprobada', aprobado_por = $1, codigo_nfc = $2,
+            `UPDATE solicitudes_visita sv
+             SET estado = 'aprobada',
+                 aprobado_por = $1,
                  updated_at = NOW()
-             WHERE id = $3 RETURNING *`,
-            [aprobadoPor, codigoNfc, id]
+             WHERE sv.id = $2 RETURNING *`,
+            [aprobadoPor, id]
         );
 
         return result.rows[0] || null;
@@ -425,58 +391,18 @@ class Conection {
         return result.rows[0] || null;
     }
 
-    async verificarNFC(id, codigoNfc) {
-
-        const client = await this.connect();
-
-        const solicitud = await client.query(
-            `SELECT * FROM solicitudes_visita WHERE id = $1`,
-            [id]
-        );
-
-        if (solicitud.rows.length === 0) return { valido: false, error: "Solicitud no encontrada" };
-
-        const sv = solicitud.rows[0];
-
-        if (sv.estado !== 'aprobada') return { valido: false, error: "La visita no está aprobada" };
-        if (sv.codigo_nfc !== codigoNfc) return { valido: false, error: "Código NFC incorrecto" };
-
-        const horaProgramada = new Date(sv.hora_programada);
-        const ahora = new Date();
-        const diffMs = Math.abs(ahora - horaProgramada);
-        const diffMin = diffMs / 60000;
-
-        if (diffMin > 5) return { valido: false, error: "Fuera de la ventana de 5 minutos" };
-
-        await client.query(
-            `UPDATE solicitudes_visita SET nfc_verificado = TRUE, updated_at = NOW() WHERE id = $1`,
-            [id]
-        );
-
-        return { valido: true, mensaje: "NFC verificado correctamente", solicitud: sv };
-    }
-
-    async marcarNfcVerificado(id) {
-
-        const client = await this.connect();
-
-        await client.query(
-            `UPDATE solicitudes_visita SET nfc_verificado = TRUE, updated_at = NOW() WHERE id = $1`,
-            [id]
-        );
-    }
-
-    async registrarIntentoIntruso(codigoNfc, ip, userAgent) {
+    async actualizarFechaSolicitud(id, horaProgramada) {
 
         const client = await this.connect();
 
         const result = await client.query(
-            `INSERT INTO intentos_intrusos (codigo_nfc, ip, user_agent)
-             VALUES ($1, $2, $3) RETURNING id`,
-            [codigoNfc, ip, userAgent]
+            `UPDATE solicitudes_visita
+             SET hora_programada = $1, updated_at = NOW()
+             WHERE id = $2 RETURNING *`,
+            [horaProgramada, id]
         );
 
-        return result.rows[0];
+        return result.rows[0] || null;
     }
 
     async obtenerSolicitudPorId(id) {
@@ -494,17 +420,17 @@ class Conection {
         return result.rows[0] || null;
     }
 
-    async obtenerVisitaAprobadaActiva(usuarioId) {
+    async obtenerVisitaAprobadaPorUsuario(usuarioId) {
 
         const client = await this.connect();
 
+        // Ventana: desde la hora programada hasta 10 minutos despues
         const result = await client.query(
             `SELECT * FROM solicitudes_visita
              WHERE solicitante_id = $1
                AND estado = 'aprobada'
-               AND nfc_verificado = TRUE
-               AND hora_programada BETWEEN NOW() - INTERVAL '5 minutes'
-                                       AND NOW() + INTERVAL '5 minutes'
+               AND NOW() >= hora_programada
+               AND NOW() <= hora_programada + INTERVAL '10 minutes'
              ORDER BY hora_programada DESC LIMIT 1`,
             [usuarioId]
         );
@@ -512,21 +438,18 @@ class Conection {
         return result.rows[0] || null;
     }
 
-    async obtenerVisitaAprobadaPorUsuario(usuarioId) {
+    async expirarVisitasVencidas(usuarioId) {
 
         const client = await this.connect();
 
-        const result = await client.query(
-            `SELECT * FROM solicitudes_visita
+        await client.query(
+            `UPDATE solicitudes_visita
+             SET estado = 'vencida', updated_at = NOW()
              WHERE solicitante_id = $1
                AND estado = 'aprobada'
-               AND hora_programada BETWEEN NOW() - INTERVAL '5 minutes'
-                                       AND NOW() + INTERVAL '5 minutes'
-             ORDER BY hora_programada DESC LIMIT 1`,
+               AND NOW() > hora_programada + INTERVAL '10 minutes'`,
             [usuarioId]
         );
-
-        return result.rows[0] || null;
     }
 
     // Métodos existentes

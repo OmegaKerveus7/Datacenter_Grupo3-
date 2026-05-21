@@ -29,9 +29,9 @@ export default function SolicitarVisita() {
     }
   }
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const minTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
   return (
     <div style={styles.container}>
@@ -59,7 +59,7 @@ export default function SolicitarVisita() {
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
             required
-            min={minDate}
+            min={today}
             style={styles.input}
           />
 
@@ -69,6 +69,7 @@ export default function SolicitarVisita() {
             value={hora}
             onChange={(e) => setHora(e.target.value)}
             required
+            min={fecha === today ? minTime : undefined}
             style={styles.input}
           />
 

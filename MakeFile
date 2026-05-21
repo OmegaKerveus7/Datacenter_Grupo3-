@@ -1,13 +1,17 @@
-.PHONY: run dev build
+.PHONY: run dev build frontend stop
 
 run:
 	bun run DataCenter/server.js
 
 dev:
-	powershell -Command "Start-Process -NoNewWindow -WorkingDirectory DataCenter bun 'run server.js'; Set-Location Frontend; bun run dev"
+	bun run DataCenter/server.js &
+	cd Frontend && bun run dev
 
 build:
 	cd Frontend && bun run build
 
 frontend:
 	cd Frontend && bun run dev
+
+stop:
+	-taskkill /F /IM bun.exe 2>nul || true

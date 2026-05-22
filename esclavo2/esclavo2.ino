@@ -116,11 +116,11 @@ void loop() {
     pirOnTime = millis();
   }
 
-  if (pirActivo && millis() - pirOnTime < 1000) {
+  if (pirActivo && millis() - pirOnTime < 5000) {
     pir = 1;
   } else {
     pir = 0;
-    if (pirActivo && millis() - pirOnTime > 6000) { pirActivo = false; pirOnTime = millis(); }
+    if (pirActivo && millis() - pirOnTime > 10000) { pirActivo = false; pirOnTime = millis(); }
   }
 
   if (btn1Actual == LOW && btn1Ant == HIGH) abrirPuerta1();
@@ -132,14 +132,11 @@ void loop() {
   if (puerta1Abierta && millis() - tiempoPuerta1 >= TIEMPO_ABIERTA) cerrarPuerta1();
   if (puerta2Abierta && millis() - tiempoPuerta2 >= TIEMPO_ABIERTA) cerrarPuerta2();
 
+  int alerta_local = (pir == 1 && !puerta1Abierta && !puerta2Abierta) ? 1 : 0;
   snprintf(datos_esclavo2, sizeof(datos_esclavo2),
-           "|%d,%d,%d,%d,%d,%d",
-           btn1Actual == LOW ? 1 : 0,
-           btn2Actual == LOW ? 1 : 0,
-           pir,
+           "|%d,%d",
            temperatura,
-           puerta1Abierta ? 1 : 0,
-           puerta2Abierta ? 1 : 0);
+           alerta_local);
 
   Serial.println(datos_esclavo2);
   delay(100);

@@ -255,6 +255,60 @@ app.post('/api/acceso/puerta-2', async ({ jwt, headers, set }) => {
     }
 });
 
+// ============ UNLOCK PUERTAS (desbloquear despues de intrusion) ============
+
+app.post('/api/acceso/unlock', async ({ jwt, headers, set }) => {
+
+    try {
+        const payload = await authGuard({ jwt, headers, set });
+
+        if (payload && payload.error) return payload;
+
+        const check = await rolGuard(payload, ['gerente', 'admin'], set);
+
+        if (check && check.error) return check;
+
+        const comando = await Conection.crearComando('UNLOCK_DOORS', null);
+
+        return {
+            estado: "ok",
+            mensaje: "Puertas desbloqueadas",
+            comandoId: comando.id
+        };
+
+    } catch (error) {
+
+        set.status = 500;
+        return { error: error.message };
+    }
+});
+
+app.post('/api/acceso/lock', async ({ jwt, headers, set }) => {
+
+    try {
+        const payload = await authGuard({ jwt, headers, set });
+
+        if (payload && payload.error) return payload;
+
+        const check = await rolGuard(payload, ['gerente', 'admin'], set);
+
+        if (check && check.error) return check;
+
+        const comando = await Conection.crearComando('LOCK_DOORS', null);
+
+        return {
+            estado: "ok",
+            mensaje: "Puertas bloqueadas",
+            comandoId: comando.id
+        };
+
+    } catch (error) {
+
+        set.status = 500;
+        return { error: error.message };
+    }
+});
+
 // ============ ACCESO NFC (valida key de puerta + visita del usuario autenticado) ============
 
 const PUERTA2_KEY = '7C:B3:70:51';

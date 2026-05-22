@@ -20,7 +20,6 @@ int tempPuertas = 0;
 int puerta1 = 0;
 int puerta2 = 0;
 int alertaPuertas = 0;
-int prevAlertaPuertas = 0;
 
 // Datos esclavo 3 - Jardin
 int humedadSuelo = 0;
@@ -34,9 +33,6 @@ String cmdBuffer = "";
 // Buzzer persistent 5s
 unsigned long buzzerStart = 0;
 bool buzzerOn = false;
-
-// Estado de lock de puertas (solo por PIR)
-bool puertasLocked = false;
 
 void setup() {
   Wire.begin();
@@ -82,6 +78,16 @@ void loop() {
           Wire.write('2');
           Wire.endTransmission();
           Serial.println(" -> Abriendo puerta 2 via I2C");
+        } else if (comando == "UNLOCK_DOORS") {
+          Wire.beginTransmission(9);
+          Wire.write('U');
+          Wire.endTransmission();
+          Serial.println(" -> Puertas desbloqueadas via API");
+        } else if (comando == "LOCK_DOORS") {
+          Wire.beginTransmission(9);
+          Wire.write('L');
+          Wire.endTransmission();
+          Serial.println(" -> Puertas bloqueadas via API");
         }
       }
       cmdBuffer = "";
@@ -121,18 +127,9 @@ void loop() {
 
   if (resp2.length() > 0) {
     int p1 = resp2.indexOf(',');
-    int p2 = resp2.indexOf(',', p1 + 1);
-    int p3 = resp2.indexOf(',', p2 + 1);
-    int p4 = resp2.indexOf(',', p3 + 1);
-    int p5 = resp2.indexOf(',', p4 + 1);
-    if (p1 > 0 && p5 > 0) {
-      btn1 = resp2.substring(1, p1).toInt();
-      btn2 = resp2.substring(p1 + 1, p2).toInt();
-      pir = resp2.substring(p2 + 1, p3).toInt();
-      tempPuertas = resp2.substring(p3 + 1, p4).toInt();
-      puerta1 = resp2.substring(p4 + 1, p5).toInt();
-      puerta2 = resp2.substring(p5 + 1).toInt();
-      alertaPuertas = (pir == 1 && puerta1 == 0 && puerta2 == 0) ? 1 : 0;
+    if (p1 > 0) {
+      tempPuertas = resp2.substring(1, p1).toInt();
+      alertaPuertas = resp2.substring(p1 + 1).toInt();
       Serial.print("E2: "); Serial.println(resp2);
     }
   }
@@ -159,33 +156,13 @@ void loop() {
   // ===== 4. CALCULAR ALERTA GLOBAL =====
   alerta = (humo == 1 || tempServidores > 30 || tempJardin > 45 || alertaPuertas == 1) ? 1 : 0;
 
-  // ===== 5. CONTROL DE LOCK DE PUERTAS (solo por PIR, no por gas/temp) =====
-  if (alertaPuertas == 1 && !puertasLocked) {
-    puertasLocked = true;
-    Wire.beginTransmission(9);
-    Wire.write('L');
-    Wire.endTransmission();
-    Serial.println(" -> Puertas LOCKED por PIR");
-  } else if (alertaPuertas == 0 && puertasLocked) {
-    puertasLocked = false;
-    Wire.beginTransmission(9);
-    Wire.write('U');
-    Wire.endTransmission();
-    Serial.println(" -> Puertas UNLOCKED");
-  }
-  prevAlertaPuertas = alertaPuertas;
-
-  // ===== 6. BUZZER PERSISTENTE 5s =====
+  // ===== 5. BUZZER PERSISTENTE 5s (una vez activado suena 5s completos) =====
   if (alerta == 1 && !buzzerOn) {
     buzzerOn = true;
     buzzerStart = millis();
     digitalWrite(buzzerPin, HIGH);
   }
   if (buzzerOn && millis() - buzzerStart >= 5000) {
-    buzzerOn = false;
-    digitalWrite(buzzerPin, LOW);
-  }
-  if (alerta == 0) {
     buzzerOn = false;
     digitalWrite(buzzerPin, LOW);
   }
@@ -252,42 +229,12 @@ void loop() {
   Serial.print(humedadAire);
   Serial.println();
 
-  // ===== 8. LCD 16x2 (solo Servidores y Jardin) =====
-  if (millis() - lastCambio > 3000) {
-    pantalla++;
-    if (pantalla > 1) pantalla = 0;
-    lastCambio = millis();
-    lcd.clear();
-  }
+  // ===== 8. ESTADO DEL DATACENTER =====
+  String estadoDC = "Normal";
+  if (alerta == 1) estadoDC = "Emergencia";
+  else if (humo == 1 || tempServidores > 30 || tempJardin > 45) estadoDC = "Fallos";
 
-  switch (pantalla) {
-    case 0:
-      lcd.setCursor(0, 0);
-      lcd.print("Sala Servidores");
-      lcd.setCursor(0, 1);
-      lcd.print(humo); lcd.print(" ");
-      lcd.print(tempServidores); lcd.print("C");
-      if (fanState > 0) { lcd.print(" F"); lcd.print(fanState); }
-      else lcd.print("    ");
-      lcd.print(humedadServidores); lcd.print("%");
-      if (alerta) {
-        lcd.setCursor(13, 1); lcd.print("ALAR");
-      } else {
-        lcd.setCursor(13, 1); lcd.print("    ");
-      }
-      if (puertasLocked) { lcd.setCursor(0, 1); lcd.print("L"); }
-      break;
-    case 1:
-      lcd.setCursor(0, 0);
-      lcd.print("Jardin");
-      lcd.setCursor(0, 1);
-      lcd.print("SH:"); lcd.print(humedadSuelo);
-      lcd.print(" T:"); lcd.print(tempJardin);
-      lcd.print(" H:"); lcd.print(humedadAire);
-      break;
-  }
-
-  // ===== 7. LCD 16x2 =====
+  // ===== 9. LCD 16x2 =====
   if (millis() - lastCambio > 3000) {
     pantalla++;
     if (pantalla > 2) pantalla = 0;
@@ -313,15 +260,12 @@ void loop() {
       break;
     case 1:
       lcd.setCursor(0, 0);
-      lcd.print("Puertas/Acceso");
+      lcd.print("Area Red");
       lcd.setCursor(0, 1);
-      lcd.print(btn1); lcd.print("/"); lcd.print(btn2); lcd.print(" ");
-      lcd.print("P"); lcd.print(pir); lcd.print(" ");
-      if (alertaPuertas) {
-        lcd.print("INTRUSO");
-      } else {
-        lcd.print(puerta1); lcd.print(puerta2);
-        lcd.print("      ");
+      lcd.print(tempPuertas); lcd.print("C ");
+      lcd.print(estadoDC);
+      if (estadoDC.length() < 8) {
+        for (int i = estadoDC.length(); i < 8; i++) lcd.print(" ");
       }
       break;
     case 2:

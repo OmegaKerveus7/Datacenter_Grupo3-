@@ -111,7 +111,12 @@ void setup() {
   Serial2.begin(9600, SERIAL_8N1, RX2_PIN, TX2_PIN);
   Serial.println("ESP32 iniciado");
 
-  esp_task_wdt_init(10, true);
+  esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = 10000,
+    .idle_core_mask = (1 << 0),
+    .trigger_panic = true
+  };
+  esp_task_wdt_init(&wdt_config);
   esp_task_wdt_add(NULL);
 
   WiFi.begin(ssid, password);

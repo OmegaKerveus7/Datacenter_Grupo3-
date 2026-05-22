@@ -22,11 +22,15 @@ export default function Navbar() {
         <Link to="/dashboard" style={styles.link}>Inicio</Link>
         <Link to="/solicitar-visita" style={styles.link}>Solicitar Visita</Link>
         <Link to="/mis-visitas" style={styles.link}>Mis Visitas</Link>
+
         {(user.rol === 'gerente' || user.rol === 'admin') && (
           <Link to="/panel-visitas" style={styles.link}>Panel Visitas</Link>
         )}
         {(user.rol === 'gerente' || user.rol === 'admin') && (
           <Link to="/monitoreo" style={styles.link}>Monitoreo</Link>
+        )}
+        {(user.rol === 'gerente' || user.rol === 'admin') && (
+          <Link to="/accesos" style={styles.link}>Accesos</Link>
         )}
         {user.rol === 'admin' && (
           <Link to="/gestion-usuarios" style={styles.link}>Usuarios</Link>

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Manual Técnico — DataCenter Access Control</title>
+<style>
+  @page { margin: 2.54cm; size: letter; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 2;
+    color: #000;
+    background: #fff;
+    padding: 2.54cm;
+    max-width: 21.59cm;
+    margin: 0 auto;
+  }
+  h1 { font-size: 18pt; text-align: center; margin: 2cm 0 1cm; font-weight: bold; }
+  h2 { font-size: 16pt; margin-top: 1.5cm; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 4px; }
+  h3 { font-size: 14pt; margin-top: 1cm; font-weight: bold; }
+  h4 { font-size: 12pt; margin-top: 0.8cm; font-weight: bold; font-style: italic; }
+  p { text-align: justify; margin: 6pt 0; text-indent: 1.27cm; }
+  p.no-indent { text-indent: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 15pt 0; font-size: 11pt; }
+  th, td { border: 1px solid #000; padding: 6pt 8pt; text-align: left; }
+  th { background: #f0f0f0; font-weight: bold; }
+  ul, ol { margin: 6pt 0 6pt 2cm; }
+  li { margin: 3pt 0; }
+  code { font-family: 'Courier New', monospace; font-size: 10pt; background: #f5f5f5; padding: 1pt 4pt; }
+  pre { font-family: 'Courier New', monospace; font-size: 10pt; background: #f5f5f5; padding: 10pt; margin: 10pt 0; border-left: 3px solid #333; line-height: 1.4; white-space: pre-wrap; }
+  .cover { text-align: center; padding-top: 4cm; page-break-after: always; }
+  .cover h1 { font-size: 22pt; margin: 1cm 0; }
+  .cover h2 { font-size: 16pt; border: none; margin: 0.5cm 0; }
+  .cover p { text-align: center; text-indent: 0; margin: 0.3cm 0; }
+  .cover .escudo { font-size: 48pt; margin-bottom: 1cm; }
+  .page-break { page-break-before: always; }
+  .toc { margin: 1cm 0; }
+  .toc a { color: #000; text-decoration: none; display: block; }
+  .toc a:hover { text-decoration: underline; }
+  figcaption { text-align: center; font-style: italic; font-size: 11pt; margin: 6pt 0; }
+  .ref { margin-left: 1.27cm; text-indent: -1.27cm; margin-bottom: 10pt; }
+  .portrait { text-align: center; margin: 15pt 0; }
+  .portrait img { max-width: 12cm; border: 1px solid #ccc; }
+  .portrait i { display: block; font-size: 10pt; margin-top: 4pt; }
+  .badge { display: inline-block; padding: 1pt 6pt; font-size: 10pt; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- PORTADA -->
+<!-- ============================================================ -->
+<div class="cover">
+  <div class="escudo">🏛️</div>
+  <h1>Universidad Mariano Gálvez de Guatemala</h1>
+  <h2>Facultad de Ingeniería en Sistemas</h2>
+  <h2>Curso: Arquitectura de Computadoras</h2>
+  <br>
+  <h1>Manual Técnico</h1>
+  <h1>DataCenter Access Control System</h1>
+  <br>
+  <p><strong>Grupo 3</strong></p>
+  <br>
+  <p><strong>Integrantes:</strong></p>
+  <p>Gustavo Adolfo Tobías Recinos — 5190-19-13375</p>
+  <p style="font-size:10pt; color:#666;">(Completar nombres de integrantes)</p>
+  <br><br>
+  <p><strong>Docente:</strong></p>
+  <p>Ing. (Nombre del docente)</p>
+  <br><br>
+  <p>Guatemala, mayo 2026</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- ÍNDICE -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 style="text-align:center; border:none;">Índice</h2>
+<div class="toc">
+  <p>1. <a href="#intro">Introducción</a></p>
+  <p>2. <a href="#objetivos">Objetivos</a></p>
+  <p>3. <a href="#arquitectura">Arquitectura del Sistema</a></p>
+  <p style="margin-left:1cm;">3.1. Diagrama de bloques</p>
+  <p style="margin-left:1cm;">3.2. Flujo de datos</p>
+  <p>4. <a href="#componentes">Componentes del Sistema</a></p>
+  <p style="margin-left:1cm;">4.1. Esclavo 1 — Sala de Servidores</p>
+  <p style="margin-left:1cm;">4.2. Esclavo 2 — Puertas y Acceso</p>
+  <p style="margin-left:1cm;">4.3. Esclavo 3 — Jardín y Riego</p>
+  <p style="margin-left:1cm;">4.4. Arduino Mega — Maestro I2C</p>
+  <p style="margin-left:1cm;">4.5. ESP32 — Gateway WiFi</p>
+  <p style="margin-left:1cm;">4.6. Backend — API REST (Bun + Elysia)</p>
+  <p style="margin-left:1cm;">4.7. Frontend — React + Vite</p>
+  <p>5. <a href="#protocolos">Protocolos de Comunicación</a></p>
+  <p style="margin-left:1cm;">5.1. I2C entre Arduinos</p>
+  <p style="margin-left:1cm;">5.2. UART entre Mega y ESP32</p>
+  <p style="margin-left:1cm;">5.3. HTTP/REST entre ESP32 y Backend</p>
+  <p style="margin-left:1cm;">5.4. Gestión de Interrupciones</p>
+  <p>6. <a href="#alertas">Sistema de Alertas y Prioridades</a></p>
+  <p>7. <a href="#base">Base de Datos</a></p>
+  <p>8. <a href="#seguridad">Seguridad y Control de Acceso</a></p>
+  <p>9. <a href="#manual">Manual de Operación</a></p>
+  <p>10. <a href="#conclusiones">Conclusiones</a></p>
+  <p>11. <a href="#referencias">Referencias</a></p>
+</div>
+
+<!-- ============================================================ -->
+<!-- 1. INTRODUCCIÓN -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="intro">1. Introducción</h2>
+
+<p>El presente documento constituye el manual técnico del sistema <strong>DataCenter Access Control</strong>, desarrollado como proyecto final del curso de Arquitectura de Computadoras por el Grupo 3. El sistema integra hardware embebido (Arduinos, sensores, actuadores) con una plataforma web moderna para el control de acceso y monitoreo ambiental de un centro de datos a escala educativa.</p>
+
+<p>El proyecto aborda conceptos fundamentales de la arquitectura de computadoras: comunicación entre periféricos vía I2C y UART, jerarquía maestro-esclavo, manejo de interrupciones, conversión analógico-digital, control PWM, y la integración de sistemas embebidos con servicios en la nube. Se implementa un sistema de control de acceso de dos puertas: la Puerta 1 con autenticación remota simple y la Puerta 2 mediante verificación NFC asociada a visitas programadas.</p>
+
+<p>El sistema se compone de tres microcontroladores esclavos (Arduino Uno) conectados vía I2C a un maestro (Arduino Mega), el cual se comunica mediante UART a un ESP32 que funge como gateway hacia una API REST alojada en AWS. La interfaz de usuario es una aplicación web desarrollada con React y Vite, servida mediante Bun.</p>
+
+<!-- ============================================================ -->
+<!-- 2. OBJETIVOS -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="objetivos">2. Objetivos</h2>
+
+<h3>2.1. Objetivo General</h3>
+<p>Diseñar e implementar un sistema integral de control de acceso y monitoreo ambiental para un centro de datos, aplicando los conceptos de arquitectura de computadoras, comunicación entre periféricos y sistemas embebidos.</p>
+
+<h3>2.2. Objetivos Específicos</h3>
+<ol>
+  <li>Implementar una red I2C con un maestro (Arduino Mega) y tres esclavos (Arduino Uno) para la adquisición distribuida de sensores.</li>
+  <li>Desarrollar un sistema de control de acceso con dos niveles: remoto (Puerta 1) y NFC con visitas programadas (Puerta 2).</li>
+  <li>Implementar un sistema de alertas escalonado por prioridades con notificaciones vía Telegram y correo electrónico.</li>
+  <li>Diseñar una interfaz web con roles de usuario (empleado, gerente, admin) para administración y monitoreo.</li>
+  <li>Documentar el mapa completo de interrupciones del microcontrolador y su aplicación en el sistema.</li>
+</ol>
+
+<!-- ============================================================ -->
+<!-- 3. ARQUITECTURA -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="arquitectura">3. Arquitectura del Sistema</h2>
+
+<h3>3.1. Diagrama de bloques</h3>
+
+<div class="portrait">
+<pre style="font-size:10pt; background:#fff; border:1px solid #ccc; text-align:center; line-height:1.6;">
+┌───────────────────────────────────────────────────────────────┐
+│                     FRONTEND WEB (React + Vite)               │
+│              http://192.168.1.49:5173                         │
+└────────────────────┬──────────────────────────────────────────┘
+                     │ HTTP (API REST)
+                     ▼
+┌───────────────────────────────────────────────────────────────┐
+│               BACKEND (Bun + Elysia en puerto 3000)           │
+│               AWS EC2 / Localhost                             │
+└────────┬──────────┬──────────┬────────────────────────────────┘
+         │          │          │
+         ▼          ▼          ▼
+   ┌─────────┐ ┌─────────┐ ┌─────────┐
+   │PostgreSQL│ │Telegram │ │  Email  │
+   │  AWS RDS │ │   Bot   │ │  SMTP   │
+   └─────────┘ └─────────┘ └─────────┘
+         ▲
+         │ HTTP POST
+         ▼
+┌───────────────────────────────────────────────────────────────┐
+│                    ESP32 (Gateway WiFi)                        │
+│              Polling de comandos cada 2s                      │
+└────────┬──────────────────────────────────────────────────────┘
+         │ UART (Serial1)
+         ▼
+┌───────────────────────────────────────────────────────────────┐
+│              ARDUINO MEGA (Maestro I2C)                       │
+│   Alerta global · Buzzer · LCD 16x2 · Control de bloqueo     │
+└──────┬──────────────┬──────────────┬──────────────────────────┘
+       │ I2C addr 8   │ I2C addr 9   │ I2C addr 10
+       ▼              ▼              ▼
+┌────────────┐ ┌────────────┐ ┌────────────┐
+│ ESCLAVO 1  │ │ ESCLAVO 2  │ │ ESCLAVO 3  │
+│ Servidores │ │ Puertas    │ │ Jardín     │
+│ DHT11      │ │ DHT11      │ │ DHT11      │
+│ MQ-135     │ │ PIR HC-SR  │ │ FC-28      │
+│ Ventilador │ │ Servos x2  │ │ Bomba agua │
+│ PWM        │ │ Botones x2 │ │ Relé       │
+└────────────┘ └────────────┘ └────────────┘
+</pre>
+<figcaption>Figura 1. Diagrama de bloques del sistema DataCenter Access Control</figcaption>
+</div>
+
+<h3>3.2. Flujo de datos</h3>
+
+<p>El flujo de información sigue una arquitectura jerárquica de tres niveles:</p>
+
+<ol>
+  <li><strong>Nivel sensor (adquisición):</strong> Cada esclavo Arduino lee sus sensores periódicamente y almacena los datos en un buffer. Cuando el maestro lo solicita por I2C, transmite la cadena formateada.</li>
+  <li><strong>Nivel de procesamiento local:</strong> El Mega recopila los datos de los tres esclavos, calcula la alerta global, controla el buzzer y la LCD, y envía todo al ESP32 por UART.</li>
+  <li><strong>Nivel de nube:</strong> El ESP32 parsea los datos, detecta cambios y envía HTTP POST al backend, que persiste en PostgreSQL y dispara notificaciones si hay alertas.</li>
+</ol>
+
+<p>El polling de comandos sigue el camino inverso: el ESP32 consulta cada 2 segundos <code>GET /api/comandos/pendientes</code>, y si hay comandos (ej: OPEN_DOOR_1), los envía al Mega por UART, que los reenvía al esclavo 2 por I2C.</p>
+
+<!-- ============================================================ -->
+<!-- 4. COMPONENTES -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="componentes">4. Componentes del Sistema</h2>
+
+<h3>4.1. Esclavo 1 — Sala de Servidores</h3>
+
+<table>
+  <tr><th>Componente</th><th>Pin</th><th>Función</th></tr>
+  <tr><td>DHT11</td><td>D2</td><td>Temperatura y humedad ambiente</td></tr>
+  <tr><td>MQ-135</td><td>A0</td><td>Detección de humo/gas (calidad del aire)</td></tr>
+  <tr><td>Ventilador PWM</td><td>D6</td><td>Control de velocidad de enfriamiento</td></tr>
+  <tr><td>I2C</td><td>SDA/SCL</td><td>Comunicación con Mega (dirección 0x08)</td></tr>
+</table>
+
+<h4>Control de ventilador</h4>
+<table>
+  <tr><th>Temperatura</th><th>Nivel</th><th>PWM</th></tr>
+  <tr><td>&lt; 20°C</td><td>OFF</td><td>0</td></tr>
+  <tr><td>20 – 24°C</td><td>Bajo</td><td>51 (20%)</td></tr>
+  <tr><td>25 – 29°C</td><td>Medio</td><td>102 (40%)</td></tr>
+  <tr><td>≥ 30°C</td><td>Alto</td><td>153 (60%)</td></tr>
+</table>
+
+<h4>Detección de humo</h4>
+<p>El MQ-135 se calibra durante los primeros 30 segundos (30 muestras) para establecer una línea base. Una vez calibrado, si la calidad del aire supera la línea base en más de 5 puntos, se activa la bandera de humo (<code>humo = 1</code>). La línea base se actualiza continuamente con un filtro de media móvil (promedio de 20 muestras).</p>
+
+<h4>Formato de datos I2C</h4>
+<pre>|{humo},{temperatura},{humedad},{fanLevel}</pre>
+
+<h3>4.2. Esclavo 2 — Puertas y Acceso</h3>
+
+<table>
+  <tr><th>Componente</th><th>Pin</th><th>Función</th></tr>
+  <tr><td>Botón 1</td><td>D2</td><td>Apertura local Puerta 1 (input pullup)</td></tr>
+  <tr><td>Botón 2</td><td>D3</td><td>Apertura local Puerta 2 (input pullup)</td></tr>
+  <tr><td>PIR HC-SR501</td><td>D4</td><td>Detección de movimiento</td></tr>
+  <tr><td>DHT11</td><td>D7</td><td>Temperatura área de red</td></tr>
+  <tr><td>Servo 1</td><td>D9</td><td>Apertura/cierre Puerta 1</td></tr>
+  <tr><td>Servo 2</td><td>D10</td><td>Apertura/cierre Puerta 2</td></tr>
+</table>
+
+<h4>Control de acceso por botones</h4>
+<p>Los botones físicos del esclavo 2 permiten abrir las puertas localmente. Sin embargo, cuando el sistema detecta una intrusión (PIR activo con ambas puertas cerradas), el Mega envía el comando <code>'L'</code> (lock) que bloquea los botones, impidiendo que un intruso pueda abrir las puertas y escapar. Los comandos remotos <code>'O'</code> (open) y <code>'C'</code> (close) provenientes del Mega siempre funcionan, incluso en estado bloqueado, para permitir que el personal autorizado pueda controlar las puertas.</p>
+
+<h4>Detección PIR</h4>
+<p>El sensor PIR tiene un debounce de 200 ms, mantiene la señal activa por 1 segundo, y tiene un tiempo de rearme de 6 segundos. Esto evita falsos positivos por ruido eléctrico o cambios bruscos de temperatura.</p>
+
+<h4>Puertas servo-controladas</h4>
+<p>Cada puerta utiliza un servo motor con dos posiciones: cerrada (0°) y abierta (95° para puerta 1, 90° para puerta 2). Tras 5 segundos en posición abierta, la puerta se cierra automáticamente.</p>
+
+<h4>Formato de datos I2C</h4>
+<pre>|{btn1},{btn2},{pir},{temperatura},{puerta1},{puerta2}</pre>
+
+<h4>Comandos I2C recibidos</h4>
+<table>
+  <tr><th>Comando</th><th>Función</th></tr>
+  <tr><td><code>'O' + '1'</code></td><td>Abrir Puerta 1</td></tr>
+  <tr><td><code>'O' + '2'</code></td><td>Abrir Puerta 2</td></tr>
+  <tr><td><code>'C' + '1'</code></td><td>Cerrar Puerta 1</td></tr>
+  <tr><td><code>'C' + '2'</code></td><td>Cerrar Puerta 2</td></tr>
+  <tr><td><code>'L'</code></td><td>Bloquear botones locales</td></tr>
+  <tr><td><code>'U'</code></td><td>Desbloquear botones locales</td></tr>
+</table>
+
+<h3>4.3. Esclavo 3 — Jardín y Riego</h3>
+
+<table>
+  <tr><th>Componente</th><th>Pin</th><th>Función</th></tr>
+  <tr><td>DHT11</td><td>D2</td><td>Temperatura y humedad ambiente del jardín</td></tr>
+  <tr><td>FC-28</td><td>A0</td><td>Sensor de humedad del suelo</td></tr>
+  <tr><td>FC-28 Power</td><td>D3</td><td>Alimentación controlada del sensor (antioxidación)</td></tr>
+  <tr><td>Bomba de agua</td><td>D7</td><td>Relé de activación (LOW = encendido)</td></tr>
+</table>
+
+<h4>Control automático de riego</h4>
+<table>
+  <tr><th>Humedad del suelo</th><th>Acción</th></tr>
+  <tr><td>&lt; 20%</td><td>Bomba encendida continua</td></tr>
+  <tr><td>20 – 29%</td><td>Ciclo 10s encendido / 5s apagado</td></tr>
+  <tr><td>30 – 39%</td><td>Ciclo 5s encendido / 7s apagado</td></tr>
+  <tr><td>40 – 54%</td><td>Ciclo 3s encendido / 17s apagado</td></tr>
+  <tr><td>≥ 55%</td><td>Bomba apagada</td></tr>
+</table>
+
+<p>Para evitar la corrosión por electrólisis del sensor FC-28, su pin de alimentación se activa solo durante la lectura (100 ms) y se desactiva el resto del tiempo.</p>
+
+<h3>4.4. Arduino Mega — Maestro I2C</h3>
+
+<p>El Arduino Mega 2560 actúa como maestro del bus I2C y concentrador de datos. Sus funciones principales son:</p>
+
+<ul>
+  <li><strong>Lectura cíclica:</strong> Cada ~2 segundos solicita datos a los tres esclavos (direcciones 8, 9, 10).</li>
+  <li><strong>Cálculo de alerta global:</strong> Combina las condiciones de todos los esclavos para determinar si hay una situación crítica.</li>
+  <li><strong>Control de buzzer:</strong> Activa el buzzer en el pin 8 durante 5 segundos ante cualquier alerta.</li>
+  <li><strong>Display LCD:</strong> Muestra alternadamente los datos de Servidores y Jardín en un LCD 16x2 con dirección I2C 0x27.</li>
+  <li><strong>Reenvío de comandos:</strong> Recibe comandos del ESP32 por Serial1 y los reenvía al esclavo 2 por I2C.</li>
+  <li><strong>Bloqueo de seguridad:</strong> En caso de intrusión, envía comando <code>'L'</code> al esclavo 2 para bloquear botones.</li>
+  <li><strong>Cierre de emergencia:</strong> En caso de humo/incendio, cierra ambas puertas automáticamente (sin bloquear).</li>
+</ul>
+
+<h4>Cálculo de alerta global</h4>
+<pre>alerta = (humo == 1 || tempServidores > 30 || tempJardin > 45 || alertaPuertas == 1) ? 1 : 0;
+
+alertaPuertas = (pir == 1 && puerta1 == 0 && puerta2 == 0) ? 1 : 0;</pre>
+
+<p>La alerta se mantiene activa durante 5 segundos después de que la condición desaparezca, para evitar parpadeo del buzzer.</p>
+
+<h3>4.5. ESP32 — Gateway WiFi</h3>
+
+<p>El ESP32 actúa como puente entre el Arduino Mega (UART) y el backend (HTTP). Funciones clave:</p>
+
+<ul>
+  <li><strong>Recepción UART:</strong> Lee datos del Mega a 9600 baudios por Serial2 (pines RX2=16, TX2=17).</li>
+  <li><strong>Detección de cambios:</strong> Solo envía datos al backend si algún valor cambió, evitando escrituras innecesarias en la base de datos.</li>
+  <li><strong>HTTP POST:</strong> Envía datos a tres endpoints: <code>/area/servidores</code>, <code>/area/puertas</code>, <code>/area/jardin</code>.</li>
+  <li><strong>Polling de comandos:</strong> Cada 2 segundos consulta <code>GET /api/comandos/pendientes</code> y ejecuta los comandos pendientes.</li>
+  <li><strong>Watchdog:</strong> Configuración en caliente — si el ESP32 se congela, desconectar y reconectar el USB lo restablece sin pérdida de datos.</li>
+</ul>
+
+<h3>4.6. Backend — API REST</h3>
+
+<table>
+  <tr><th>Endpoint</th><th>Método</th><th>Función</th></tr>
+  <tr><td><code>/auth/login</code></td><td>POST</td><td>Autenticación JWT</td></tr>
+  <tr><td><code>/auth/registro</code></td><td>POST</td><td>Registro de usuarios (admin)</td></tr>
+  <tr><td><code>/auth/me</code></td><td>POST</td><td>Verificar token JWT</td></tr>
+  <tr><td><code>/api/acceso/puerta-1</code></td><td>POST</td><td>Abrir Puerta 1</td></tr>
+  <tr><td><code>/api/acceso/puerta-2</code></td><td>POST</td><td>Abrir Puerta 2</td></tr>
+  <tr><td><code>/api/acceso/nfc</code></td><td>POST</td><td>Verificar NFC</td></tr>
+  <tr><td><code>/api/visitas</code></td><td>GET/POST</td><td>Gestión de visitas</td></tr>
+  <tr><td><code>/api/visitas/:id/aprobar</code></td><td>POST</td><td>Aprobar solicitud</td></tr>
+  <tr><td><code>/api/visitas/:id/rechazar</code></td><td>POST</td><td>Rechazar solicitud</td></tr>
+  <tr><td><code>/api/visitas/:id/fecha</code></td><td>PUT</td><td>Modificar hora</td></tr>
+  <tr><td><code>/area/servidores</code></td><td>GET/POST</td><td>Datos servidores</td></tr>
+  <tr><td><code>/area/puertas</code></td><td>GET/POST</td><td>Datos puertas</td></tr>
+  <tr><td><code>/area/jardin</code></td><td>GET/POST</td><td>Datos jardín</td></tr>
+  <tr><td><code>/api/monitoreo</code></td><td>GET</td><td>Últimos datos (todas las áreas)</td></tr>
+  <tr><td><code>/api/comandos/pendientes</code></td><td>GET</td><td>Comandos IoT pendientes</td></tr>
+  <tr><td><code>/api/email/enviar</code></td><td>POST</td><td>Envío de correo</td></tr>
+  <tr><td><code>/api/telegram/enviar</code></td><td>POST</td><td>Envío de Telegram</td></tr>
+</table>
+
+<h3>4.7. Frontend — React + Vite</h3>
+
+<p>La interfaz de usuario está desarrollada con React 18 y Vite, servida mediante Bun. Incluye las siguientes vistas:</p>
+
+<table>
+  <tr><th>Ruta</th><th>Vista</th><th>Roles</th></tr>
+  <tr><td><code>/dashboard</code></td><td>Panel principal con botones de puertas</td><td>Todos</td></tr>
+  <tr><td><code>/solicitar-visita</code></td><td>Formulario de solicitud de visita</td><td>Todos</td></tr>
+  <tr><td><code>/mis-visitas</code></td><td>Listado de visitas del usuario</td><td>Todos</td></tr>
+  <tr><td><code>/verificar-nfc</code></td><td>Verificación NFC con login propio</td><td>Público</td></tr>
+  <tr><td><code>/panel-visitas</code></td><td>Panel de aprobación de visitas</td><td>Gerente, Admin</td></tr>
+  <tr><td><code>/monitoreo</code></td><td>Monitoreo de todas las áreas</td><td>Gerente, Admin</td></tr>
+  <tr><td><code>/accesos</code></td><td>Estado de puertas y registro de accesos</td><td>Gerente, Admin</td></tr>
+  <tr><td><code>/gestion-usuarios</code></td><td>CRUD de usuarios</td><td>Admin</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- 5. PROTOCOLOS -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="protocolos">5. Protocolos de Comunicación</h2>
+
+<h3>5.1. I2C entre Arduinos</h3>
+
+<p>El bus I2C opera a 100 kHz (modo estándar). El Arduino Mega es el único maestro; los tres esclavos tienen direcciones fijas:</p>
+
+<table>
+  <tr><th>Dispositivo</th><th>Dirección I2C</th><th>Rol</th></tr>
+  <tr><td>Arduino Mega</td><td>Maestro</td><td>Inicia todas las comunicaciones</td></tr>
+  <tr><td>Esclavo 1</td><td>0x08</td><td>Sala de servidores</td></tr>
+  <tr><td>Esclavo 2</td><td>0x09</td><td>Puertas y acceso</td></tr>
+  <tr><td>Esclavo 3</td><td>0x0A</td><td>Jardín y riego</td></tr>
+</table>
+
+<p>El maestro utiliza <code>Wire.requestFrom(dir, 20)</code> para solicitar hasta 20 bytes de cada esclavo. Los esclavos responden con la función <code>Wire.onRequest()</code>, enviando una cadena delimitada por pipes y comas. El maestro también puede escribir datos a los esclavos mediante <code>Wire.beginTransmission()</code> + <code>Wire.write()</code> + <code>Wire.endTransmission()</code>, usado para enviar comandos de apertura/cierre de puertas y bloqueo de seguridad.</p>
+
+<h3>5.2. UART entre Mega y ESP32</h3>
+
+<p>La comunicación entre el Mega y el ESP32 se realiza mediante UART a 9600 baudios, 8 bits de datos, sin paridad, 1 bit de parada. El Mega transmite por Serial1 (pines 18 TX1 / 19 RX1) y el ESP32 recibe por Serial2 (pines 16 RX2 / 17 TX2). Se utiliza un módulo TXS0108E como adaptador de nivel lógico (5V del Mega a 3.3V del ESP32).</p>
+
+<p>El formato de trama es:</p>
+<pre>1,{humo},{temp},{humedad},{alerta},{fan}|2,{btn1},{btn2},{pir},{p1},{p2},{alertaPuertas}|3,{suelo},{tempJ},{humJ}\n</pre>
+
+<p>El ESP32 también envía comandos al Mega con el formato <code>CMD,{comando}\n</code>. El Mega parsea estos comandos y los reenvía por I2C al esclavo correspondiente.</p>
+
+<h3>5.3. HTTP/REST entre ESP32 y Backend</h3>
+
+<p>El ESP32 se conecta a la red WiFi "Omega" y realiza peticiones HTTP al backend en <code>http://192.168.1.49:3000</code>. Se utiliza el formato JSON con Content-Type <code>application/json</code>. La detección de cambios evita enviar datos duplicados, reduciendo el tráfico y las escrituras en base de datos.</p>
+
+<h3>5.4. Gestión de Interrupciones</h3>
+
+<p>El sistema de interrupciones del microcontrolador es un concepto central del curso que este proyecto ilustra de manera práctica. A continuación se documenta el mapa completo de interrupciones del sistema.</p>
+
+<h4>5.4.1. Mapa de interrupciones del Arduino Mega</h4>
+
+<table>
+  <tr><th>Recurso</th><th>Pin físico</th><th>Función actual</th><th>Propuesta para implementar</th></tr>
+  <tr><td>INT0 (PD0)</td><td>Pin 21 (RX0)</td><td>No utilizado (UART por polling)</td><td>PIR sensor — flanco ascendente</td></tr>
+  <tr><td>INT1 (PD1)</td><td>Pin 20 (TX0)</td><td>No utilizado</td><td>Reservado para futuros sensores</td></tr>
+  <tr><td>INT2 (PD2)</td><td>Pin 19 (RX1)</td><td>UART1 receive (polling)</td><td>Interrupción de recepción ESP32</td></tr>
+  <tr><td>INT3 (PD3)</td><td>Pin 18 (TX1)</td><td>UART1 transmit</td><td>(sin cambio)</td></tr>
+  <tr><td>INT4 (PD4)</td><td>Pin 2</td><td>No utilizado</td><td>Sensor de lluvia — flanco descendente</td></tr>
+  <tr><td>INT5 (PD5)</td><td>Pin 3</td><td>No utilizado</td><td>Reservado</td></tr>
+  <tr><td>INT6 (PD6)</td><td>Pin 4</td><td>No utilizado</td><td>Reservado</td></tr>
+  <tr><td>INT7 (PD7)</td><td>Pin 5</td><td>No utilizado</td><td>Reservado</td></tr>
+  <tr><td>Timer1</td><td>—</td><td>No utilizado (delay en loop)</td><td>Muestreo periódico cada 500 ms</td></tr>
+  <tr><td>Timer2</td><td>—</td><td>No utilizado</td><td>PWM para tonos del buzzer</td></tr>
+  <tr><td>UART1 RX</td><td>Pin 19</td><td>Polling en loop</td><td>ISR de recepción con buffer circular</td></tr>
+</table>
+
+<h4>5.4.2. Implementación actual (polling)</h4>
+
+<p>En la versión actual, el sistema no utiliza interrupciones hardware. Todo el control se realiza mediante polling con la función <code>millis()</code> para temporización y <code>delay()</code> para pausas. El ciclo principal del Mega tiene una duración aproximada de 2 segundos, determinada por el <code>delay(2000)</code> al final del loop. Esto es suficiente para la tasa de actualización requerida por los sensores ambientales, pero introduce una latencia de hasta 2 segundos en la detección de eventos críticos como una intrusión.</p>
+
+<h4>5.4.3. Rediseño propuesto con interrupciones</h4>
+
+<p>Para cumplir con los requisitos del curso y mejorar la capacidad de respuesta del sistema, se propone el siguiente rediseño basado en interrupciones:</p>
+
+<h4>INT0 — PIR (flanco ascendente)</h4>
+<pre>ISR(INT0_vect) {
+    pirFlag = true;  // Solo actualiza bandera
+}
+
+// En loop():
+if (pirFlag) {
+    pirFlag = false;
+    alertaPuertas = (puerta1 == 0 && puerta2 == 0) ? 1 : 0;
+}</pre>
+<p><strong>Latencia estimada:</strong> &lt; 10 µs desde el flanco del PIR hasta la activación de la bandera.</p>
+
+<h4>Timer1 — Muestreo periódico</h4>
+<pre>ISR(TIMER1_COMPA_vect) {
+    timerFlag = true;  // Bandera para el loop
+}
+
+// Configuración: CTC mode, 500 Hz → periodo 2 ms</pre>
+<p>Esto permite ejecutar las lecturas de sensores cada 500 ms de forma independiente a la duración del loop principal.</p>
+
+<h4>UART1 RX — Recepción de ESP32</h4>
+<pre>ISR(USART1_RX_vect) {
+    char c = UDR1;              // Leer byte recibido
+    if (c == '\n') {
+        cmdReadyFlag = true;    // Trama completa lista
+    } else if (idx < BUFFER_SIZE - 1) {
+        cmdBuffer[idx++] = c;   // Almacenar en buffer circular
+    }
+}
+// En loop():
+if (cmdReadyFlag) {
+    cmdReadyFlag = false;
+    procesarComando(cmdBuffer);
+    idx = 0;
+}</pre>
+
+<h4>5.4.4. Prioridades de interrupción</h4>
+
+<p>El ATmega2560 del Arduino Mega define una tabla de vectores de interrupción con prioridades fijas. Las interrupciones externas (INT0-INT7) tienen prioridad sobre las interrupciones de timer. La prioridad relativa es:</p>
+
+<ol>
+  <li><strong>Reset</strong> (prioridad más alta)</li>
+  <li><strong>INT0 – INT7</strong> (interrupciones externas)</li>
+  <li><strong>Timer1 COMPA</strong> (timer compare match)</li>
+  <li><strong>USART1 RX</strong> (recepción UART)</li>
+  <li><strong>SPI, TWI (I2C), etc.</strong></li>
+</ol>
+
+<p>Se recomienda asignar INT0 al PIR por ser el evento más crítico en términos de latencia (intrusión debe detectarse en &lt; 10 µs). Timer1 se asigna al muestreo periódico (500 Hz), y UART1 RX a la recepción de datos del ESP32. Las ISR deben ser mínimas: solo actualizan banderas. La lógica de negocio se ejecuta en el loop principal.</p>
+
+<h4>5.4.5. Análisis de latencia</h4>
+
+<table>
+  <tr><th>Evento crítico</th><th>Latencia actual (polling)</th><th>Latencia propuesta (interrupciones)</th><th>Meta</th></tr>
+  <tr><td>PIR → Alarma audible</td><td>~2 segundos</td><td>&lt; 10 µs + 200 ms (buzzer)</td><td>&lt; 500 ms ✅</td></tr>
+  <tr><td>Humo → Cierre puertas</td><td>~2 segundos</td><td>&lt; 2 ms + 500 ms (I2C)</td><td>&lt; 500 ms ✅</td></tr>
+  <tr><td>Temp > 30°C → Ventilador máx</td><td>~2 segundos</td><td>500 ms (timer)</td><td>&lt; 1 s ✅</td></tr>
+  <tr><td>Comando ESP32 → Apertura puerta</td><td>~2 segundos</td><td>&lt; 1 ms + 500 ms (I2C)</td><td>&lt; 500 ms ✅</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- 6. ALERTAS -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="alertas">6. Sistema de Alertas y Prioridades</h2>
+
+<p>El sistema implementa cuatro niveles de prioridad para la gestión de alertas. Cada alerta implica una respuesta del sistema y un canal de notificación específico.</p>
+
+<table>
+  <tr><th>Prioridad</th><th>Evento / Condición</th><th>Respuesta del Sistema</th><th>Canal de Notificación</th></tr>
+  <tr><td><strong>P1 — Crítica</strong></td><td>🔥 Detección de humo (MQ-135) o incendio</td><td>Cierre de puertas + Buzzer 5s + LCD "ALARMA" + Bloqueo NO activado (evacuación)</td><td>Email + Telegram Bot + Dashboard</td></tr>
+  <tr><td><strong>P2 — Alta</strong></td><td>🌡️ Temperatura servidores > 30°C</td><td>Ventilador PWM máximo + Buzzer 5s</td><td>Email + Telegram Bot + Dashboard</td></tr>
+  <tr><td><strong>P2 — Alta</strong></td><td>🚨 Intruso detectado (PIR + puertas cerradas)</td><td>Bloqueo de botones físicos + Buzzer 5s + LCD "INTRUSO"</td><td>Email + Telegram Bot + Dashboard</td></tr>
+  <tr><td><strong>P3 — Media</strong></td><td>🌱 Humedad fuera de rango (>75% o &lt;30%)</td><td>Alerta visual en Dashboard</td><td>Dashboard</td></tr>
+  <tr><td><strong>P3 — Media</strong></td><td>💧 Nivel de agua bajo en depósito</td><td>Suspensión de bomba + Alerta en LCD</td><td>Dashboard</td></tr>
+  <tr><td><strong>P4 — Baja</strong></td><td>🌡️ Temperatura entre 28°C y 32°C (pre-alerta)</td><td>Incremento gradual de ventilador (PWM 50%)</td><td>Log en base de datos</td></tr>
+  <tr><td><strong>P4 — Baja</strong></td><td>🌧️ Sensor de lluvia activo durante riego</td><td>Suspensión automática del ciclo de riego</td><td>Log en base de datos</td></tr>
+</table>
+
+<p>Las notificaciones por email se envían mediante SMTP de Gmail (App Password) y las de Telegram a través del bot <code>@DataCenterAlertasFKBot</code>. Ambos sistemas se activan automáticamente cuando el backend recibe una alerta con <code>valor = 1</code> desde los endpoints <code>/area/servidores</code> o <code>/area/puertas</code>.</p>
+
+<!-- ============================================================ -->
+<!-- 7. BASE DE DATOS -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="base">7. Base de Datos</h2>
+
+<p>El sistema utiliza PostgreSQL 16 en AWS RDS (us-east-1). La base de datos se llama <code>postgres</code> y contiene las siguientes tablas:</p>
+
+<table>
+  <tr><th>Tabla</th><th>Propósito</th></tr>
+  <tr><td><code>usuarios</code></td><td>Almacena usuarios del sistema con roles (empleado, gerente, admin)</td></tr>
+  <tr><td><code>comandos_iot</code></td><td>Cola de comandos pendientes para el ESP32</td></tr>
+  <tr><td><code>area_servidores</code></td><td>Histórico de temperatura, humo, humedad, alerta y velocidad del ventilador</td></tr>
+  <tr><td><code>area_puertas</code></td><td>Histórico de estado de botones, PIR, puertas y alerta de intrusión</td></tr>
+  <tr><td><code>area_jardin</code></td><td>Histórico de humedad del suelo, temperatura y humedad ambiente</td></tr>
+  <tr><td><code>accesos_puertas</code></td><td>Registro de aperturas de puertas con usuario, método y timestamp</td></tr>
+  <tr><td><code>solicitudes_visita</code></td><td>Gestión de visitas programadas para acceso NFC</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- 8. SEGURIDAD -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="seguridad">8. Seguridad y Control de Acceso</h2>
+
+<h3>8.1. Autenticación</h3>
+<p>El sistema utiliza JSON Web Tokens (JWT) para la autenticación de usuarios. El token se genera en el login y debe incluirse en el header <code>Authorization: Bearer {token}</code> de todas las peticiones autenticadas. La clave secreta es <code>datacenter-fk-secret-key-2026</code>.</p>
+
+<h3>8.2. Control de Roles</h3>
+<p>Cada usuario tiene un rol (empleado, gerente, admin) que determina las operaciones permitidas. El middleware <code>rolGuard()</code> en el backend verifica que el usuario tenga el rol requerido para acceder a cada endpoint. En el frontend, el componente <code>ProtectedRoute</code> filtra las rutas por rol.</p>
+
+<h3>8.3. Bloqueo de seguridad por intrusión</h3>
+<p>Cuando el PIR detecta movimiento con ambas puertas cerradas (posible intruso dentro del DataCenter), el Mega envía el comando <code>'L'</code> al esclavo 2, que bloquea los botones físicos de apertura. Esto impide que un intruso pueda salir del recinto. Los comandos remotos desde el Dashboard siguen funcionando para que el personal autorizado pueda liberar la situación. En caso de humo o incendio, las puertas NO se bloquean para permitir la evacuación.</p>
+
+<h3>8.4. Acceso por NFC</h3>
+<p>La Puerta 2 utiliza un chip NFC con URL fija. El chip almacena la URL <code>http://192.168.1.49:5173/verificar-nfc?key=7C:B3:70:51</code>. El key está hardcodeado en el servidor (<code>PUERTA2_KEY</code>) y solo identifica la puerta, no al usuario. La identificación del usuario se realiza mediante el formulario de login en la página de verificación NFC. Las visitas tienen una ventana de 10 minutos desde la hora programada; pasado ese tiempo, la visita vence automáticamente.</p>
+
+<!-- ============================================================ -->
+<!-- 9. MANUAL DE OPERACIÓN -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="manual">9. Manual de Operación</h2>
+
+<h3>9.1. Acceso al sistema</h3>
+<ol>
+  <li>Abrir navegador en <code>http://192.168.1.49:5173</code></li>
+  <li>Iniciar sesión con credenciales proporcionadas por el administrador</li>
+  <li>Usar el menú de navegación según el rol asignado</li>
+</ol>
+
+<h3>9.2. Usuarios por defecto</h3>
+<table>
+  <tr><th>Email</th><th>Contraseña</th><th>Rol</th></tr>
+  <tr><td>admin@datacenter.com</td><td>admin123</td><td>Administrador</td></tr>
+  <tr><td>gerente@datacenter.com</td><td>gerente123</td><td>Gerente</td></tr>
+  <tr><td>empleado@datacenter.com</td><td>empleado123</td><td>Empleado</td></tr>
+</table>
+
+<h3>9.3. Procedimiento de acceso NFC</h3>
+<ol>
+  <li>Iniciar sesión y solicitar una visita en <strong>Solicitar Visita</strong></li>
+  <li>Un gerente o administrador aprueba la visita en <strong>Panel Visitas</strong></li>
+  <li>Llegada la hora programada, acercar el chip NFC al teléfono</li>
+  <li>La página de verificación NFC se abre automáticamente</li>
+  <li>Ingresar email y contraseña del usuario que solicitó la visita</li>
+  <li>Si la visita está activa, la Puerta 2 se abre</li>
+</ol>
+
+<h3>9.4. Ventana de tiempo</h3>
+<p>La Puerta 2 puede abrirse desde la hora programada hasta 10 minutos después. Pasado ese tiempo, la visita se marca como <strong>vencida</strong> y debe solicitarse una nueva.</p>
+
+<h3>9.5. Mantenimiento del ESP32</h3>
+<p>Si el ESP32 se congela (deja de enviar datos): desconectar el cable USB, esperar 5 segundos y volver a conectarlo. Los datos históricos no se pierden porque están almacenados en la nube (AWS RDS).</p>
+
+<h3>9.6. Credenciales de notificación</h3>
+<table>
+  <tr><th>Servicio</th><th>Token / Cuenta</th></tr>
+  <tr><td>Telegram Bot</td><td><code>8533581736:AAEqhFl0Za8E4CYbLc3-6M_-JBjQhQ0E4G8</code></td></tr>
+  <tr><td>Chat ID Telegram</td><td><code>6481032132</code></td></tr>
+  <tr><td>Email SMTP</td><td><code>famkongt24@gmail.com</code></td></tr>
+  <tr><td>App Password</td><td><code>nsvd ulwz gtbb iccp</code></td></tr>
+</table>
+
+<h3>9.7. Mapa de direcciones de red</h3>
+<table>
+  <tr><th>Dispositivo</th><th>Dirección IP</th><th>Puerto</th></tr>
+  <tr><td>Frontend (Vite dev)</td><td>192.168.1.49</td><td>5173</td></tr>
+  <tr><td>Backend (Bun)</td><td>192.168.1.49</td><td>3000</td></tr>
+  <tr><td>PostgreSQL (AWS RDS)</td><td>datacenterfk.cq3gc4ceq61b.us-east-1.rds.amazonaws.com</td><td>5432</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- 10. CONCLUSIONES -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="conclusiones">10. Conclusiones</h2>
+
+<ol>
+  <li>La implementación de una red I2C con un maestro y tres esclavos demostró ser una solución efectiva y de bajo costo para la adquisición distribuida de sensores en un centro de datos a escala educativa, con una tasa de actualización de 2 segundos suficiente para monitoreo ambiental.</li>
+
+  <li>El sistema de control de acceso con dos niveles (remoto y NFC con visitas programadas) cumple con los requisitos de seguridad del DataCenter, permitiendo diferenciar entre acceso administrativo (Puerta 1) y acceso de visitas (Puerta 2) con verificación en ventana de tiempo.</li>
+
+  <li>La integración de sistemas embebidos (Arduino) con servicios en la nube (AWS RDS, Telegram Bot, Email SMTP) mediante un gateway ESP32 proporciona una arquitectura escalable que puede extenderse a aplicaciones industriales de IoT.</li>
+
+  <li>La implementación de roles de usuario (empleado, gerente, admin) con control de acceso basado en JWT y middleware de verificación garantiza que cada operación del sistema sea realizada por personal autorizado según su nivel de responsabilidad.</li>
+
+  <li>El análisis de latencia del sistema de alertas muestra que con el rediseño basado en interrupciones propuesto se puede reducir el tiempo de respuesta a eventos críticos de 2 segundos (polling) a menos de 500 ms, cumpliendo con los requisitos del curso de Arquitectura de Computadoras.</li>
+
+  <li>El mapeo completo de interrupciones del ATmega2560 demuestra la aplicación práctica de los conceptos teóricos de vectores de interrupción, ISR mínimas, prioridades y latencia en un sistema embebido real.</li>
+</ol>
+
+<!-- ============================================================ -->
+<!-- 11. REFERENCIAS -->
+<!-- ============================================================ -->
+<div class="page-break"></div>
+<h2 id="referencias">11. Referencias</h2>
+
+<p class="ref">Atmel Corporation. (2014). <i>ATmega640/1280/1281/2560/2561: 8-bit AVR Microcontroller with 64K/128K/256K Bytes In-System Programmable Flash</i> (Datasheet). https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2549-8-bit-AVR-Microcontroller-ATmega640-1280-1281-2560-2561_datasheet.pdf</p>
+
+<p class="ref">Espressif Systems. (2023). <i>ESP32 Series Datasheet</i> (v4.4). https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf</p>
+
+<p class="ref">NXP Semiconductors. (2014). <i>UM10204: I²C-bus specification and user manual</i> (Rev. 6). https://www.nxp.com/docs/en/user-guide/UM10204.pdf</p>
+
+<p class="ref">Philips Semiconductors. (2000). <i>The I²C-bus specification</i> (Version 2.1). https://www.csd.uoc.gr/~hy428/reading/i2c_spec.pdf</p>
+
+<p class="ref">PostgreSQL Global Development Group. (2024). <i>PostgreSQL 16 Documentation</i>. https://www.postgresql.org/docs/16/</p>
+
+<p class="ref">Arduino. (2023). <i>Arduino Mega 2560 Rev3 Documentation</i>. https://docs.arduino.cc/hardware/mega-2560/</p>
+
+<p class="ref">Node.js Foundation. (2024). <i>pg — PostgreSQL client for Node.js</i> (v8.12.0). https://node-postgres.com/</p>
+
+<p class="ref">Bun. (2025). <i>Bun: A fast JavaScript runtime</i>. https://bun.sh/docs</p>
+
+<p class="ref">React. (2024). <i>React 18 Documentation</i>. https://react.dev/</p>
+
+<p class="ref">ElysiaJS. (2025). <i>Elysia — Ergonomic Framework for Humans</i>. https://elysiajs.com/</p>
+
+</body>
+</html>

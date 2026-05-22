@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interrupciones - DataCenter Control de Acceso</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 30px; background: #0f0f1a; color: #e0e0e0; }
+  h1 { color: #e94560; border-bottom: 2px solid #e94560; padding-bottom: 10px; }
+  h2 { color: #e94560; margin-top: 30px; }
+  h3 { color: #0984e3; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+  th, td { border: 1px solid #333; padding: 10px; text-align: left; }
+  th { background: #1a1a2e; color: #e94560; }
+  code { background: #1a1a2e; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; color: #00b894; }
+  pre { background: #1a1a2e; padding: 15px; border-radius: 6px; overflow-x: auto; }
+  .diagram { background: #1a1a2e; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+  .note { background: #0984e322; border-left: 4px solid #0984e3; padding: 12px; margin: 15px 0; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Interrupciones y Prioridades</h1>
+<p>DataCenter - Sistema de Control de Acceso y Monitoreo</p>
+
+<h2>1. Introducción</h2>
+<p>El sistema utiliza un Arduino Mega 2560 como maestro I2C que se comunica con tres esclavos (servidores, puertas, jardín) y un ESP32 como puente WiFi. Las interrupciones se manejan tanto a nivel hardware (I2C, sensores) como software (timers, comunicación serie).</p>
+
+<h2>2. Mapa de Interrupciones</h2>
+
+<table>
+<tr><th>Componente</th><th>Tipo de Interrupción</th><th>Función</th><th>Prioridad</th></tr>
+<tr><td>Esclavo 2 (I2C addr 9)</td><td><code>onReceive</code> (I2C)</td><td>Recibir comandos 'O1','O2','C1','C2','L','U' del Mega</td><td>Alta</td></tr>
+<tr><td>Esclavo 2 (I2C addr 9)</td><td><code>onRequest</code> (I2C)</td><td>Enviar datos de sensores al Mega</td><td>Alta</td></tr>
+<tr><td>Esclavo 1 (I2C addr 8)</td><td><code>onRequest</code> (I2C)</td><td>Enviar datos de servidores al Mega</td><td>Alta</td></tr>
+<tr><td>Esclavo 3 (I2C addr 10)</td><td><code>onRequest</code> (I2C)</td><td>Enviar datos de jardín al Mega</td><td>Alta</td></tr>
+<tr><td>Mega - Serial1</td><td>Recepción UART</td><td>Recibir comandos <code>CMD,OPEN_DOOR_X</code> del ESP32</td><td>Media</td></tr>
+<tr><td>Mega - Loop principal</td><td>I2C request (polling)</td><td>Solicitar datos a esclavos cada ciclo</td><td>Media</td></tr>
+<tr><td>ESP32 - WiFi HTTP</td><td>Timer (2s polling)</td><td>Consultar comandos pendientes vía HTTP GET</td><td>Baja</td></tr>
+<tr><td>PIR sensor</td><td>Digital read (polling)</td><td>Detección de movimiento en puertas</td><td>Alta (seguridad)</td></tr>
+<tr><td>Botones puertas</td><td>Digital read (polling)</td><td>Apertura manual de puertas</td><td>Media</td></tr>
+<tr><td>DHT11</td><td>Timer (2s polling)</td><td>Lectura de temperatura/humedad</td><td>Baja</td></tr>
+<tr><td>Watchdog ESP32</td><td>Hardware WDT (10s)</td><td>Reset automático si el sistema se congela</td><td>Crítica</td></tr>
+</table>
+
+<h2>3. Prioridades</h2>
+
+<table>
+<tr><th>Nivel</th><th>Descripción</th><th>Componentes afectados</th></tr>
+<tr><td>Crítica</td><td>Seguridad del sistema y watchdog</td><td>ESP32 WDT, I2C lock flag, PIR</td></tr>
+<tr><td>Alta</td><td>Comunicación entre microcontroladores</td><td>I2C onReceive/onRequest, Serial1</td></tr>
+<tr><td>Media</td><td>Control de actuadores y lógica de negocio</td><td>Servos, relés, buzzer, LCD</td></tr>
+<tr><td>Baja</td><td>Monitoreo y telemetría</td><td>DHT11, sensores de humedad, HTTP posts</td></tr>
+</table>
+
+<h3>3.1 Justificación de Prioridades</h3>
+
+<p><strong>Crítica:</strong> El watchdog del ESP32 (10 segundos) asegura que el sistema se recupere automáticamente ante un congelamiento, evitando que los comandos de apertura de puertas queden sin procesar. La detección PIR se procesa con prioridad crítica porque una intrusión no detectada compromete la seguridad.</p>
+
+<p><strong>Alta:</strong> Las interrupciones I2C (<code>onReceive</code>/<code>onRequest</code>) tienen prioridad alta porque la comunicación entre el Mega y los esclavos es el canal principal de datos. Si se pierde una transmisión I2C, los datos de sensores se corrompen y los comandos de apertura no llegan a los servos.</p>
+
+<p><strong>Media:</strong> El control de servos (abrir/cerrar puertas) y el buzzer tienen prioridad media. Aunque importantes, no requieren respuesta instantánea; un retardo de milisegundos es aceptable.</p>
+
+<p><strong>Baja:</strong> Las lecturas de temperatura/humedad (DHT11) y los envíos HTTP al servidor pueden retrasarse sin afectar la funcionalidad principal del sistema.</p>
+
+<h2>4. Diagrama de Flujo de Interrupciones</h2>
+
+<div class="diagram">
+<pre>
+ESP32 (WiFi)
+   |
+   | Serial2 (UART)
+   v
+Mega 2560 (Maestro I2C)
+   |
+   |--- I2C addr 8 (Esclavo 1 - Servidores)
+   |       onRequest: envía |humo,temp,humedad,fan
+   |
+   |--- I2C addr 9 (Esclavo 2 - Puertas)
+   |       onReceive: recibe 'O1','O2','C1','C2','L','U'
+   |       onRequest: envía |btn1,btn2,pir,temp,puerta1,puerta2
+   |
+   |--- I2C addr 10 (Esclavo 3 - Jardín)
+           onRequest: envía |humedad_suelo,temp,humedad_aire
+
+Comandos I2C:
+┌─────┬──────────────────────────────┐
+│ CMD │ Acción                       │
+├─────┼──────────────────────────────┤
+│ O1  │ Abrir puerta 1               │
+│ O2  │ Abrir puerta 2               │
+│ C1  │ Cerrar puerta 1              │
+│ C2  │ Cerrar puerta 2              │
+│ L   │ Lock (bloquear ambas puertas)│
+│ U   │ Unlock (desbloquear puertas) │
+└─────┴──────────────────────────────┘
+</pre>
+</div>
+
+<h2>5. Implementación Técnica</h2>
+
+<h3>5.1 I2C onReceive (Esclavo 2)</h3>
+<pre>
+void recibirComando(int bytes) {
+  if (Wire.available()) {
+    char cmd = Wire.read();
+    if (cmd == 'O') {          // Open
+      int puerta = Wire.read() - '0';
+      if (puerta == 1 &amp;&amp; !locked) abrirPuerta1();
+      if (puerta == 2 &amp;&amp; !locked) abrirPuerta2();
+    } else if (cmd == 'C') {   // Close
+      int puerta = Wire.read() - '0';
+      if (puerta == 1) cerrarPuerta1();
+      if (puerta == 2) cerrarPuerta2();
+    } else if (cmd == 'L') {   // Lock
+      locked = true;
+    } else if (cmd == 'U') {   // Unlock
+      locked = false;
+    }
+  }
+}
+</pre>
+
+<h3>5.2 Envío de Comando Lock desde el Mega</h3>
+<pre>
+// Solo se activa por PIR (no por humo/temperatura)
+if (alertaPuertas == 1 && !puertasLocked) {
+  puertasLocked = true;
+  Wire.beginTransmission(9);
+  Wire.write('L');
+  Wire.endTransmission();
+} else if (alertaPuertas == 0 && puertasLocked) {
+  puertasLocked = false;
+  Wire.beginTransmission(9);
+  Wire.write('U');
+  Wire.endTransmission();
+}
+</pre>
+
+<h3>5.3 Buzzer Persistente (5 segundos)</h3>
+<pre>
+if (alerta == 1 && !buzzerOn) {
+  buzzerOn = true;
+  buzzerStart = millis();
+  digitalWrite(buzzerPin, HIGH);
+}
+if (buzzerOn && millis() - buzzerStart >= 5000) {
+  buzzerOn = false;
+  digitalWrite(buzzerPin, LOW);
+}
+if (alerta == 0) {
+  buzzerOn = false;
+  digitalWrite(buzzerPin, LOW);
+}
+</pre>
+
+<h3>5.4 Watchdog ESP32</h3>
+<pre>
+#include "esp_task_wdt.h"
+
+void setup() {
+  esp_task_wdt_init(10, true);  // Timeout 10s
+  esp_task_wdt_add(NULL);       // Vigilar tarea actual
+}
+
+void loop() {
+  esp_task_wdt_reset();         // Reset watchdog cada ciclo
+  // ... resto del código
+}
+</pre>
+
+<div class="note">
+<strong>Nota importante:</strong> El comando 'L' (lock) se envía exclusivamente cuando se detecta una intrusión por PIR (alertaPuertas == 1). En caso de incendio (humo == 1) o temperatura crítica, las puertas permanecen desbloqueadas para permitir la evacuación, cumpliendo con las normas de seguridad.
+</div>
+
+</body>
+</html>

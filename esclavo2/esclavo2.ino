@@ -35,9 +35,15 @@ bool puerta2Abierta = false;
 unsigned long tiempoPuerta1 = 0;
 unsigned long tiempoPuerta2 = 0;
 
+bool locked = false;
+
 char datos_esclavo2[25];
 
 void abrirPuerta1() {
+  if (locked) {
+    Serial.println("Puerta 1 bloqueada!");
+    return;
+  }
   servo1.write(POS_P1_ABIERTA);
   puerta1Abierta = true;
   tiempoPuerta1 = millis();
@@ -51,6 +57,10 @@ void cerrarPuerta1() {
 }
 
 void abrirPuerta2() {
+  if (locked) {
+    Serial.println("Puerta 2 bloqueada!");
+    return;
+  }
   servo2.write(POS_P2_ABIERTA);
   puerta2Abierta = true;
   tiempoPuerta2 = millis();
@@ -150,6 +160,12 @@ void recibirComando(int bytes) {
       int puerta = Wire.read() - '0';
       if (puerta == 1) cerrarPuerta1();
       if (puerta == 2) cerrarPuerta2();
+    } else if (cmd == 'L') {
+      locked = true;
+      Serial.println("Puertas BLOQUEADAS");
+    } else if (cmd == 'U') {
+      locked = false;
+      Serial.println("Puertas DESBLOQUEADAS");
     }
   }
 }

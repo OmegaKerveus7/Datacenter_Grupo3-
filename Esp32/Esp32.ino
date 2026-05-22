@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "esp_task_wdt.h"
 
 const char* ssid = "Omega";
 const char* password = "d5adc4a32689";
@@ -110,6 +111,9 @@ void setup() {
   Serial2.begin(9600, SERIAL_8N1, RX2_PIN, TX2_PIN);
   Serial.println("ESP32 iniciado");
 
+  esp_task_wdt_init(10, true);
+  esp_task_wdt_add(NULL);
+
   WiFi.begin(ssid, password);
   Serial.print("Conectando WiFi");
   while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
@@ -117,6 +121,7 @@ void setup() {
 }
 
 void loop() {
+  esp_task_wdt_reset();
   // Leer datos del Mega
   if (Serial2.available()) {
     String datos = Serial2.readStringUntil('\n');

@@ -1,4 +1,5 @@
 import pg from "pg";
+import nodemailer from "nodemailer";
 
 class Conection {
 
@@ -584,6 +585,57 @@ class Conection {
 
             console.log("Error jardin:", error.message);
 
+            return { estado: "error", mensaje: error.message };
+        }
+    }
+
+    // ============ NOTIFICACIONES (Email + Telegram) ============
+
+    _prevAlertaServidores = 0;
+    _prevAlertaPuertas = 0;
+
+    notificarSiAlerta(area, datos) {
+        if (area === 'servidores') {
+            const alerta = datos.alerta || 0;
+            if (alerta === 1 && this._prevAlertaServidores === 0) {
+                const mensaje = `🚨 ALERTA en Sala de Servidores\nTemperatura: ${datos.temperatura}°C\nHumo: ${datos.humo === 1 ? 'DETECTADO' : 'No'}\nHumedad: ${datos.humedad}%\nFan: ${datos.fan}`;
+                this.enviarTelegram(mensaje);
+                this.enviarCorreo("ALERTA - Sala de Servidores", mensaje);
+            }
+            this._prevAlertaServidores = alerta;
+        } else if (area === 'puertas') {
+            const alerta = datos.alerta || 0;
+            if (alerta === 1 && this._prevAlertaPuertas === 0) {
+                const mensaje = `🚨 ALERTA en Puertas/Acceso\nPIR: ${datos.pir === 1 ? 'Movimiento detectado' : 'No'}\nPuerta 1: ${datos.puerta1 === 1 ? 'Abierta' : 'Cerrada'}\nPuerta 2: ${datos.puerta2 === 1 ? 'Abierta' : 'Cerrada'}`;
+                this.enviarTelegram(mensaje);
+                this.enviarCorreo("ALERTA - Puertas/Acceso", mensaje);
+            }
+            this._prevAlertaPuertas = alerta;
+        }
+    }
+
+    async enviarCorreo(asunto, mensaje) {
+        try {
+            const correo = process.env.EMAIL_CORREO;
+            const password = process.env.PASSWORD_CORREO;
+            if (!correo || !password) {
+                console.log("Email: credenciales no configuradas");
+                return { estado: "error", mensaje: "Credenciales no configuradas" };
+            }
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: { user: correo, pass: password }
+            });
+            const info = await transporter.sendMail({
+                from: correo,
+                to: correo,
+                subject: asunto,
+                text: mensaje
+            });
+            console.log("Email enviado:", info.messageId);
+            return { estado: "ok", mensajeId: info.messageId };
+        } catch (error) {
+            console.log("Error email:", error.message);
             return { estado: "error", mensaje: error.message };
         }
     }

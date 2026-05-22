@@ -10,6 +10,7 @@ import VerificarNFC from './pages/VerificarNFC';
 import PanelVisitas from './pages/PanelVisitas';
 import GestionUsuarios from './pages/GestionUsuarios';
 import Monitoreo from './pages/Monitoreo';
+import Accesos from './pages/Accesos';
 
 function App() {
   return (
@@ -59,6 +60,14 @@ function App() {
             element={
               <ProtectedRoute roles={['gerente', 'admin']}>
                 <Monitoreo />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/accesos"
+            element={
+              <ProtectedRoute roles={['gerente', 'admin']}>
+                <Accesos />
               </ProtectedRoute>
             }
           />

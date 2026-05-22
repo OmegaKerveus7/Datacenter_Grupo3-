@@ -631,7 +631,7 @@ app.get('/api/accesos', async ({ jwt, headers, set }) => {
 
         if (payload && payload.error) return payload;
 
-        const check = await rolGuard(payload, ['admin'], set);
+        const check = await rolGuard(payload, ['admin', 'gerente'], set);
 
         if (check && check.error) return check;
 
@@ -680,7 +680,11 @@ app.post('/area/servidores', async ({ body }) => {
 
     const { temperatura, humo, humedad, alerta, fan } = body;
 
-    return await Conection.guardarServidores(temperatura, humo, humedad, alerta, fan);
+    const result = await Conection.guardarServidores(temperatura, humo, humedad, alerta, fan);
+
+    Conection.notificarSiAlerta('servidores', { temperatura, humo, humedad, alerta, fan });
+
+    return result;
 });
 
 app.get('/area/servidores', async () => {
@@ -699,7 +703,11 @@ app.post('/area/puertas', async ({ body }) => {
 
     const { btn1, btn2, pir, puerta1, puerta2, alerta } = body;
 
-    return await Conection.guardarPuertas(btn1, btn2, pir, puerta1, puerta2, alerta);
+    const result = await Conection.guardarPuertas(btn1, btn2, pir, puerta1, puerta2, alerta);
+
+    Conection.notificarSiAlerta('puertas', { btn1, btn2, pir, puerta1, puerta2, alerta });
+
+    return result;
 });
 
 app.get('/area/puertas', async () => {

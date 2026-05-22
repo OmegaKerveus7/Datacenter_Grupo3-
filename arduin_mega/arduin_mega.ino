@@ -20,6 +20,7 @@ int tempPuertas = 0;
 int puerta1 = 0;
 int puerta2 = 0;
 int alertaPuertas = 0;
+int prevAlertaPuertas = 0;
 
 // Datos esclavo 3 - Jardin
 int humedadSuelo = 0;
@@ -29,6 +30,13 @@ int humedadAire = 0;
 int pantalla = 0;
 unsigned long lastCambio = 0;
 String cmdBuffer = "";
+
+// Buzzer persistent 5s
+unsigned long buzzerStart = 0;
+bool buzzerOn = false;
+
+// Estado de lock de puertas (solo por PIR)
+bool puertasLocked = false;
 
 void setup() {
   Wire.begin();
@@ -151,7 +159,38 @@ void loop() {
   // ===== 4. CALCULAR ALERTA GLOBAL =====
   alerta = (humo == 1 || tempServidores > 30 || tempJardin > 45 || alertaPuertas == 1) ? 1 : 0;
 
-  // ===== 5. ENVIAR AL ESP32 =====
+  // ===== 5. CONTROL DE LOCK DE PUERTAS (solo por PIR, no por gas/temp) =====
+  if (alertaPuertas == 1 && !puertasLocked) {
+    puertasLocked = true;
+    Wire.beginTransmission(9);
+    Wire.write('L');
+    Wire.endTransmission();
+    Serial.println(" -> Puertas LOCKED por PIR");
+  } else if (alertaPuertas == 0 && puertasLocked) {
+    puertasLocked = false;
+    Wire.beginTransmission(9);
+    Wire.write('U');
+    Wire.endTransmission();
+    Serial.println(" -> Puertas UNLOCKED");
+  }
+  prevAlertaPuertas = alertaPuertas;
+
+  // ===== 6. BUZZER PERSISTENTE 5s =====
+  if (alerta == 1 && !buzzerOn) {
+    buzzerOn = true;
+    buzzerStart = millis();
+    digitalWrite(buzzerPin, HIGH);
+  }
+  if (buzzerOn && millis() - buzzerStart >= 5000) {
+    buzzerOn = false;
+    digitalWrite(buzzerPin, LOW);
+  }
+  if (alerta == 0) {
+    buzzerOn = false;
+    digitalWrite(buzzerPin, LOW);
+  }
+
+  // ===== 7. ENVIAR AL ESP32 =====
   delayMicroseconds(500);
   Serial1.print("1,");
   Serial1.print(humo);
@@ -210,15 +249,42 @@ void loop() {
   Serial.print(",");
   Serial.print(tempJardin);
   Serial.print(",");
-  Serial.println(humedadAire);
+  Serial.print(humedadAire);
+  Serial.println();
 
-  // ===== 6. BUZZER =====
-  if (alerta == 1) {
-    digitalWrite(buzzerPin, HIGH);
-    delay(200);
-    digitalWrite(buzzerPin, LOW);
-  } else {
-    digitalWrite(buzzerPin, LOW);
+  // ===== 8. LCD 16x2 (solo Servidores y Jardin) =====
+  if (millis() - lastCambio > 3000) {
+    pantalla++;
+    if (pantalla > 1) pantalla = 0;
+    lastCambio = millis();
+    lcd.clear();
+  }
+
+  switch (pantalla) {
+    case 0:
+      lcd.setCursor(0, 0);
+      lcd.print("Sala Servidores");
+      lcd.setCursor(0, 1);
+      lcd.print(humo); lcd.print(" ");
+      lcd.print(tempServidores); lcd.print("C");
+      if (fanState > 0) { lcd.print(" F"); lcd.print(fanState); }
+      else lcd.print("    ");
+      lcd.print(humedadServidores); lcd.print("%");
+      if (alerta) {
+        lcd.setCursor(13, 1); lcd.print("ALAR");
+      } else {
+        lcd.setCursor(13, 1); lcd.print("    ");
+      }
+      if (puertasLocked) { lcd.setCursor(0, 1); lcd.print("L"); }
+      break;
+    case 1:
+      lcd.setCursor(0, 0);
+      lcd.print("Jardin");
+      lcd.setCursor(0, 1);
+      lcd.print("SH:"); lcd.print(humedadSuelo);
+      lcd.print(" T:"); lcd.print(tempJardin);
+      lcd.print(" H:"); lcd.print(humedadAire);
+      break;
   }
 
   // ===== 7. LCD 16x2 =====

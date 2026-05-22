@@ -1,140 +1,129 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { obtenerMonitoreo } from '../api/areas';
 
-function formatFecha(iso) {
+function fmt(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+  return new Date(iso).toLocaleString('es-MX', { timeZone: 'America/Mexico_City', dateStyle: 'short', timeStyle: 'short' });
 }
 
-function checarActivo(area, valores) {
-  if (!valores) return false;
-  return Object.values(valores).some(v => v !== 0 && v !== null && v !== undefined && v !== '');
+function Val({ v, unit, warn, danger }) {
+  const text = v !== null && v !== undefined ? `${v}${unit || ''}` : '—';
+  const cls = `metric-value${danger ? ' danger' : warn ? ' warn' : ''}`;
+  return <span className={cls}>{text}</span>;
 }
+
+const RefreshIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+  </svg>
+);
 
 export default function Monitoreo() {
   const { token } = useAuth();
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
+  const [data, setData]       = useState(null);
+  const [error, setError]     = useState('');
+  const [loading, setLoading] = useState(true);
+  const [spinning, setSpinning] = useState(false);
 
-  useEffect(() => {
-    obtenerMonitoreo(token).then(res => {
-      if (res.error) setError(res.error);
-      else setData(res);
-    });
+  const load = useCallback(async (refresh = false) => {
+    refresh ? setSpinning(true) : setLoading(true);
+    const res = await obtenerMonitoreo(token);
+    if (res.error) setError(res.error); else { setData(res); setError(''); }
+    setLoading(false); setSpinning(false);
   }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const srv = data?.servidores;
+  const pue = data?.puertas;
+  const jar = data?.jardin;
 
   const areas = [
     {
-      titulo: 'Servidores',
-      key: 'servidores',
-      activo: data && checarActivo('servidores', data.servidores),
-      fecha: data?.servidores?.created_at,
+      key: 'servidores', titulo: 'Servidores',
+      activo: srv && Object.values(srv).some(v => v && v !== 0),
+      fecha: srv?.created_at,
       filas: [
-        { label: 'Temperatura', value: data?.servidores?.temperatura, unit: '°C' },
-        { label: 'Humo', value: data?.servidores?.humo },
-        { label: 'Humedad', value: data?.servidores?.humedad, unit: '%' },
-        { label: 'Alerta', value: data?.servidores?.alerta },
-        { label: 'Ventilador', value: data?.servidores?.fan },
-      ]
+        { label: 'Temperatura', v: srv?.temperatura, unit: ' °C', danger: srv?.temperatura > 35, warn: srv?.temperatura > 28 },
+        { label: 'Humedad',     v: srv?.humedad,     unit: ' %',  warn: srv?.humedad > 70 },
+        { label: 'Humo',        v: srv?.humo === 1 ? 'Detectado' : srv?.humo === 0 ? 'Normal' : '—', danger: srv?.humo === 1 },
+        { label: 'Ventilador',  v: srv?.fan  === 1 ? 'Encendido' : srv?.fan  === 0 ? 'Apagado'   : '—' },
+        { label: 'Alerta',      v: srv?.alerta === 1 ? 'ACTIVA' : srv?.alerta === 0 ? 'Normal' : '—', danger: srv?.alerta === 1 },
+      ],
     },
     {
-      titulo: 'Puertas / Acceso',
-      key: 'puertas',
-      activo: data && checarActivo('puertas', data.puertas),
-      fecha: data?.puertas?.created_at,
+      key: 'puertas', titulo: 'Puertas / Acceso',
+      activo: pue && Object.values(pue).some(v => v && v !== 0),
+      fecha: pue?.created_at,
       filas: [
-        { label: 'Botón 1', value: data?.puertas?.btn1 },
-        { label: 'Botón 2', value: data?.puertas?.btn2 },
-        { label: 'PIR', value: data?.puertas?.pir },
-        { label: 'Puerta 1', value: data?.puertas?.puerta1 },
-        { label: 'Puerta 2', value: data?.puertas?.puerta2 },
-        { label: 'Alarma', value: data?.puertas?.alerta },
-      ]
+        { label: 'Puerta 1',   v: pue?.puerta1 === 1 ? 'Abierta' : pue?.puerta1 === 0 ? 'Cerrada' : '—', warn: pue?.puerta1 === 1 },
+        { label: 'Puerta 2',   v: pue?.puerta2 === 1 ? 'Abierta' : pue?.puerta2 === 0 ? 'Cerrada' : '—', warn: pue?.puerta2 === 1 },
+        { label: 'Sensor PIR', v: pue?.pir    === 1 ? 'Movimiento' : pue?.pir    === 0 ? 'Inactivo' : '—', warn: pue?.pir === 1 },
+        { label: 'Botón 1',    v: pue?.btn1   === 1 ? 'Presionado' : '—' },
+        { label: 'Botón 2',    v: pue?.btn2   === 1 ? 'Presionado' : '—' },
+        { label: 'Alarma',     v: pue?.alerta === 1 ? 'ACTIVA' : pue?.alerta === 0 ? 'Normal' : '—', danger: pue?.alerta === 1 },
+      ],
     },
     {
-      titulo: 'Jardín',
-      key: 'jardin',
-      activo: data && checarActivo('jardin', data.jardin),
-      fecha: data?.jardin?.created_at,
+      key: 'jardin', titulo: 'Área Jardín',
+      activo: jar && Object.values(jar).some(v => v && v !== 0),
+      fecha: jar?.created_at,
       filas: [
-        { label: 'Humedad Suelo', value: data?.jardin?.humedad_suelo, unit: '%' },
-        { label: 'Temperatura', value: data?.jardin?.temperatura, unit: '°C' },
-        { label: 'Humedad Aire', value: data?.jardin?.humedad_aire, unit: '%' },
-      ]
+        { label: 'Humedad Suelo', v: jar?.humedad_suelo, unit: ' %',  danger: jar?.humedad_suelo < 15, warn: jar?.humedad_suelo < 30 },
+        { label: 'Temperatura',   v: jar?.temperatura,  unit: ' °C', warn: jar?.temperatura > 35 },
+        { label: 'Humedad Aire',  v: jar?.humedad_aire, unit: ' %' },
+      ],
     },
   ];
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Monitoreo del DataCenter</h2>
-
-      {error && <div style={styles.error}>{error}</div>}
-
-      {!data && !error && <p style={{ textAlign: 'center', opacity: 0.6 }}>Cargando...</p>}
-
-      <div style={styles.grid}>
-        {areas.map(a => (
-          <div key={a.key} style={styles.card}>
-            <div style={styles.header}>
-              <h3 style={{ margin: 0 }}>{a.titulo}</h3>
-              <span style={{
-                ...styles.badge,
-                background: a.activo ? '#00b894' : '#e94560'
-              }}>
-                {a.activo ? 'ACTIVA' : 'DESACTIVADA'}
-              </span>
-            </div>
-
-            <table style={styles.table}>
-              <tbody>
-                {a.filas.map(f => (
-                  <tr key={f.label}>
-                    <td style={styles.tdLabel}>{f.label}</td>
-                    <td style={styles.tdValue}>
-                      {f.value !== null && f.value !== undefined ? `${f.value}${f.unit || ''}` : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div style={styles.footer}>
-              Última actualización: {formatFecha(a.fecha)}
-            </div>
-          </div>
-        ))}
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">Monitoreo</h2>
+          <p className="page-subtitle">Estado en tiempo real del DataCenter</p>
+        </div>
+        <button onClick={() => load(true)} disabled={spinning} className="btn btn-secondary">
+          {spinning ? <span className="spinner"/> : <RefreshIcon/>}
+          Actualizar
+        </button>
       </div>
+
+      {error && (
+        <div className="alert alert-error">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading-state"><span className="spinner"/>Cargando datos...</div>
+      ) : (
+        <div className="grid-3">
+          {areas.map(a => (
+            <div key={a.key} className="card">
+              <div className="card-header">
+                <span className="card-title">{a.titulo}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className={`dot ${a.activo ? 'dot-green' : 'dot-gray'}`}/>
+                  <span className={`badge ${a.activo ? 'badge-green' : 'badge-gray'}`}>
+                    {a.activo ? 'Activa' : 'Sin datos'}
+                  </span>
+                </div>
+              </div>
+              {a.filas.map(f => (
+                <div key={f.label} className="metric-row">
+                  <span className="metric-label">{f.label}</span>
+                  <Val v={f.v} unit={f.unit} warn={f.warn} danger={f.danger}/>
+                </div>
+              ))}
+              <div className="card-footer">Actualizado: {fmt(a.fecha)}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-
-const styles = {
-  container: { padding: '20px', maxWidth: '1000px', margin: '0 auto' },
-  title: { color: 'white', textAlign: 'center', marginBottom: '25px' },
-  error: {
-    background: '#e9456033', color: '#e94560', padding: '10px',
-    borderRadius: '6px', marginBottom: '15px', textAlign: 'center'
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px'
-  },
-  card: {
-    background: '#1a1a2e', borderRadius: '10px', padding: '20px',
-    color: 'white'
-  },
-  header: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px'
-  },
-  badge: {
-    padding: '3px 10px', borderRadius: '4px', fontSize: '0.7em',
-    fontWeight: 'bold', letterSpacing: '1px'
-  },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  tdLabel: { padding: '6px 0', fontSize: '0.85em', opacity: 0.7 },
-  tdValue: { padding: '6px 0', textAlign: 'right', fontWeight: 'bold', fontSize: '1.1em' },
-  footer: { marginTop: '15px', fontSize: '0.75em', opacity: 0.5, textAlign: 'center' }
-};

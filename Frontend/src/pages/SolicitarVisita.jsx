@@ -1,134 +1,95 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { solicitarVisita } from '../api/visitas';
 
 export default function SolicitarVisita() {
   const { token } = useAuth();
+  const navigate  = useNavigate();
   const [motivo, setMotivo] = useState('');
-  const [fecha, setFecha] = useState('');
-  const [hora, setHora] = useState('');
-  const [msg, setMsg] = useState('');
-  const [error, setError] = useState('');
+  const [fecha, setFecha]   = useState('');
+  const [hora, setHora]     = useState('');
+  const [msg, setMsg]       = useState('');
+  const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
+
+  const d     = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const minT  = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setMsg('');
-    setError('');
-    setLoading(true);
-    const horaProgramada = new Date(`${fecha}T${hora}`).toISOString();
-    const res = await solicitarVisita(token, motivo, horaProgramada);
+    setMsg(''); setError(''); setLoading(true);
+    const res = await solicitarVisita(token, motivo, new Date(`${fecha}T${hora}`).toISOString());
     setLoading(false);
     if (res.estado === 'ok') {
-      setMsg('Solicitud de visita enviada correctamente. Espera la aprobación.');
-      setMotivo('');
-      setFecha('');
-      setHora('');
+      setMsg('Solicitud enviada. Espera la aprobación del administrador.');
+      setMotivo(''); setFecha(''); setHora('');
     } else {
       setError(res.error || 'Error al solicitar visita');
     }
   }
 
-  const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const minTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2>Solicitar Visita al DataCenter</h2>
-        <p style={styles.sub}>Programa una visita para acceder por la Puerta 2</p>
+    <div className="page" style={{ maxWidth: 560 }}>
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">Solicitar Visita</h2>
+          <p className="page-subtitle">Programar acceso a la Puerta 2</p>
+        </div>
+        <button onClick={() => navigate('/mis-visitas')} className="btn btn-secondary btn-sm">
+          Mis visitas
+        </button>
+      </div>
 
-        {msg && <div style={styles.success}>{msg}</div>}
-        {error && <div style={styles.error}>{error}</div>}
+      <div className="card">
+        {msg && (
+          <div className="alert alert-success">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            {msg}
+          </div>
+        )}
+        {error && (
+          <div className="alert alert-error">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label>Motivo de la visita</label>
-          <textarea
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            required
-            rows="4"
-            style={styles.textarea}
-            placeholder="Describe el motivo de tu visita..."
-          />
+        <form onSubmit={handleSubmit} className="form-stack">
+          <div className="form-group">
+            <label className="form-label">Motivo de la visita</label>
+            <textarea
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              required
+              className="form-textarea"
+              placeholder="Describe el propósito de tu visita..."
+            />
+          </div>
 
-          <label>Fecha</label>
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            required
-            min={today}
-            style={styles.input}
-          />
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Fecha</label>
+              <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
+                required min={today} className="form-input"/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Hora</label>
+              <input type="time" value={hora} onChange={e => setHora(e.target.value)}
+                required min={fecha === today ? minT : undefined} className="form-input"/>
+            </div>
+          </div>
 
-          <label>Hora</label>
-          <input
-            type="time"
-            value={hora}
-            onChange={(e) => setHora(e.target.value)}
-            required
-            min={fecha === today ? minTime : undefined}
-            style={styles.input}
-          />
-
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? 'Enviando...' : 'Enviar Solicitud'}
+          <button type="submit" disabled={loading} className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 4 }}>
+            {loading ? <><span className="spinner"/>Enviando...</> : 'Enviar solicitud'}
           </button>
         </form>
+
+        <div className="info-box" style={{ marginTop: 16 }}>
+          <strong>Nota:</strong> La solicitud debe ser aprobada por un administrador o gerente. Una vez aprobada podrás usar el NFC en el horario programado.
+        </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: { padding: '20px', display: 'flex', justifyContent: 'center' },
-  card: {
-    background: '#1a1a2e',
-    padding: '30px',
-    borderRadius: '10px',
-    width: '100%',
-    maxWidth: '500px',
-    color: 'white'
-  },
-  sub: { fontSize: '0.85em', opacity: 0.7, marginBottom: '20px' },
-  form: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  label: { fontSize: '0.9em' },
-  textarea: {
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #333',
-    background: '#16213e',
-    color: 'white',
-    fontSize: '1em',
-    resize: 'vertical'
-  },
-  input: {
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #333',
-    background: '#16213e',
-    color: 'white',
-    fontSize: '1em'
-  },
-  button: {
-    padding: '12px',
-    borderRadius: '6px',
-    border: 'none',
-    background: '#e94560',
-    color: 'white',
-    fontSize: '1em',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-    marginTop: '10px'
-  },
-  success: {
-    background: '#00b89433', color: '#00b894', padding: '10px',
-    borderRadius: '6px', marginBottom: '15px', textAlign: 'center'
-  },
-  error: {
-    background: '#e9456033', color: '#e94560', padding: '10px',
-    borderRadius: '6px', marginBottom: '15px', textAlign: 'center'
-  }
-};
